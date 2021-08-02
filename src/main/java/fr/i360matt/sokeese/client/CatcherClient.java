@@ -172,8 +172,8 @@ public class CatcherClient implements Closeable {
             if (candidate != null) {
                 // if reply class-type is waited
 
-                candidate.removeToQueue(reply.getSender());
                 candidate.biConsumer.accept(reply.getObj(), reply.getSender());
+                candidate.removeToQueue(reply.getSender());
             }
         }
     }

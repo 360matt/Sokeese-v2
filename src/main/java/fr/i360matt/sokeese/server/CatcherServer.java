@@ -8,6 +8,7 @@ import fr.i360matt.sokeese.common.redistribute.reply.Reply;
 import java.io.Closeable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -164,8 +165,7 @@ public class CatcherServer implements Closeable {
     public <A> void callWithRequest (final A obj, final OnRequest onRequest) {
         final Set<BiConsumer<?, OnRequest>> hashset = simpleEvents.get(obj.getClass());
         if (hashset != null) {
-            final OnRequest onRequest = new OnRequest(user, -1);
-            for (final BiConsumer<?, OnRequest> consumer : hashset) {
+            for (BiConsumer<?, OnRequest> consumer : hashset) {
                 ((BiConsumer<A, OnRequest>) consumer).accept(obj, onRequest);
             }
         }
@@ -187,40 +187,35 @@ public class CatcherServer implements Closeable {
         }
     }
 
-    private void processRawReply (final RawReply rawPacket, final LoggedClient client) {
-        if (rawPacket.getObj() instanceof RawPacket || rawPacket.getObj() instanceof Packet) {
+    private void processPacket (final RawPacket packet, final LoggedClient client) {
+        final OnRequest onRequest = new OnRequest(
+                client,
+                packet.getId()
+        );
+
+        this.callWithRequest(packet.getObj(), onRequest);
+    }
+
+    private void processRawReply (final RawReply rawReply, final LoggedClient client) {
+        if (rawReply.getObj() instanceof RawPacket || rawReply.getObj() instanceof Packet) {
             return;
             // fixed exploit/bug: infinite recursive.
         }
 
-        if (rawPacket.getRecipient() != null) {
-            if (rawPacket.getRecipient() instanceof String) {
-                final String recipient = (String) rawPacket.getRecipient();
-                if (recipient.equals("")) {
-                    // empty recipient = the recipient is server
 
-                    final Reply reply = new Reply(
-                            client.getClientName(),
-                            rawPacket.getObj(),
-                            rawPacket.getId()
-                    );
-                    this.processReply(reply, client);
-                } else {
-                    final LoggedClient candidate = server.getClient(recipient);
-                    if (candidate != null) {
-                        final Reply reply = new Reply(
-                                client.getClientName(),
-                                rawPacket.getObj(),
-                                rawPacket.getId()
-                        );
-
-                        candidate.send(reply);
-                    }
-                }
+        if (rawReply.getRecipient() instanceof String) {
+            final LoggedClient candidate = server.getClient((String) rawReply.getRecipient());
+            if (candidate != null) {
+                final Reply reply = new Reply(
+                        client.getClientName(),
+                        rawReply.getObj(),
+                        rawReply.getId()
+                );
+                candidate.send(reply);
             }
+        } else {
+            this.processReply(rawReply, client);
         }
-
-
     }
 
     private void processRawPacket (final RawPacket rawPacket, final LoggedClient user) {
@@ -229,47 +224,52 @@ public class CatcherServer implements Closeable {
             // fixed exploit/bug: infinite recursive.
         }
 
-        if (rawPacket.getRecipient() != null) {
-            if (rawPacket.getRecipient() instanceof String) {
-                final String recipient = (String) rawPacket.getRecipient();
-                if (recipient.equals("")) {
-                    // empty recipient = the recipient is server
-                    this.call(rawPacket.getObj(), user);
-                } else {
-                    final LoggedClient candidate = server.getClient(recipient);
-                    if (candidate != null) {
-                        final Packet packet = new Packet(
-                                rawPacket.getObj(),
-                                user.getClientName(),
-                                rawPacket.getId()
-                        );
-                        candidate.send(packet);
-                    }
+        if (rawPacket.getRecipient() instanceof String) {
+            final String recipient = (String) rawPacket.getRecipient();
+            if (recipient.equals("")) {
+                // empty recipient = the recipient is server
+                this.processPacket(rawPacket, user);
+                return;
+            }
+
+            final LoggedClient candidate = server.getClient(recipient);
+            if (candidate != null) {
+                final Packet packet = new Packet(
+                        rawPacket.getObj(),
+                        user.getClientName(),
+                        rawPacket.getId()
+                );
+                candidate.send(packet);
+            }
+        } else if (rawPacket.getRecipient() instanceof String[]) {
+            final String[] fixedRecipient = (String[]) Arrays.stream((String[]) rawPacket.getRecipient()).distinct().toArray();
+            // fixed exploit/bug: amplified DDoS with multiple same client name.
+
+            Packet packet = null;
+
+            for (final String candidateName : fixedRecipient) {
+                if (candidateName == null) {
+                    this.processPacket(rawPacket, user);
+                    continue;
                 }
-            } else if (rawPacket.getRecipient() instanceof String[]) {
-                final String[] fixedRecipient = (String[]) Arrays.stream((String[]) rawPacket.getRecipient()).distinct().toArray();
-                // fixed exploit/bug: amplified DDoS with multiple same client name.
 
-                for (final String candidateName : fixedRecipient) {
-                    if (candidateName == null)
-                        continue;
-                    if (candidateName.equals("")) {
-                        this.call(rawPacket.getObj(), user);
-                        continue;
-                    }
-
-                    final LoggedClient candidate = server.getClient(candidateName);
-                    if (candidate != null) {
-                        final Packet packet = new Packet(
+                final LoggedClient candidate = server.getClient(candidateName);
+                if (candidate != null) {
+                    if (packet == null) {
+                        packet = new Packet(
                                 rawPacket.getObj(),
                                 user.getClientName(),
                                 rawPacket.getId()
                         );
-                        candidate.send(packet);
                     }
+                    candidate.send(packet);
                 }
             }
+        } else {
+            // empty recipient = the recipient is server
+            this.processPacket(rawPacket, user);
         }
+
     }
 
     @Override
