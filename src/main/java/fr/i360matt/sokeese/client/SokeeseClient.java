@@ -41,7 +41,10 @@ public class SokeeseClient implements Closeable {
         this.executorService = Executors.newScheduledThreadPool(8);
         this.threadSafe = new CompletableFuture<>();
         try (final Socket socket = _socket) {
-            try (final ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
+            this._socket = socket;
+            socket.setTcpNoDelay(true);
+
+            try (final ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()))) {
                 this.receiver = ois;
                 this.doWaitServerStatus(username, password);
                 try (final ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream())) {
@@ -71,7 +74,7 @@ public class SokeeseClient implements Closeable {
             throw e;
         } finally {
             this.executorService.shutdownNow();
-            this.executorService = null;
+            this.catcherClient.close();
         }
     }
 
