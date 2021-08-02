@@ -17,6 +17,8 @@ public class CatcherServer implements Closeable {
     private final Map<Class<?>, Set<BiConsumer<?, OnRequest>>> simpleEvents = new ConcurrentHashMap<>();
     private final Map<Long, Map<Class<?>, ReplyExecuted>> complexEvents = new ConcurrentHashMap<>();
 
+    protected final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
+
     public static class OnRequest {
         private final LoggedClient loggedClient;
         private final long idRequest;

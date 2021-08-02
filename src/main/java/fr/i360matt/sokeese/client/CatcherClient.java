@@ -18,7 +18,9 @@ public class CatcherClient implements Closeable {
     private final Map<Class<?>, Set<BiConsumer<?, OnRequest>>> simpleEvent = new HashMap<>();
     private final Map<Long, Map<Class<?>, ReplyExecuted>> complexEvents = new HashMap<>();
 
-    public class OnRequest {
+    protected final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
+
+    public final class OnRequest {
         private final String senderName;
         private final long idRequest;
 
