@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 public class CatcherClient implements Closeable {
 
     private final Map<Class<?>, Set<BiConsumer<?, OnRequest>>> simpleEvent = new HashMap<>();
-    private final Map<Long, Map<Class<?>, ReplyExecuted>> complexEvents = new HashMap<>();
+    private final Map<Long, Map<Class<?>, ReplyExecuted>> complexEvents = new ConcurrentHashMap<>();
 
     protected final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
 
