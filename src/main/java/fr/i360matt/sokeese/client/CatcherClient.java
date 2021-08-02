@@ -66,8 +66,9 @@ public class CatcherClient implements Closeable {
         }
     }
 
-    public class ReplyBuilder {
-        private final Map<Class<?>, ReplyExecuted> relatedMap;
+    public final class ReplyBuilder {
+        private final Map<Class<?>, ReplyExecuted> relatedMap = new ConcurrentHashMap<>();
+        private ScheduledFuture<?> resultNothing;
 
         private final long idRequest;
         private final Object recipient;

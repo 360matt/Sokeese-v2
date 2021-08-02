@@ -71,6 +71,7 @@ public class CatcherServer implements Closeable {
 
     public class ReplyBuilder {
         private final Map<Class<?>, ReplyExecuted> relatedMap;
+        private ScheduledFuture<?> resultNothing;
 
         private final long idRequest;
         private final Object recipient;
