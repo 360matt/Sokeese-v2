@@ -5,6 +5,7 @@ import fr.i360matt.sokeese.client.exceptions.ClientCredentialsException;
 import fr.i360matt.sokeese.server.SokeeseServer;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class TestServer {
 
@@ -50,38 +51,56 @@ public class TestServer {
             }
         }).start();
 
-        Thread.sleep(100);
+        Thread.sleep(400);
 
         client_alpha.on(TestObj.class, (obj, event) -> {
-           // System.out.println(event.getSenderName());
+          //  System.out.println(event.getClientName());
             event.reply(0);
         });
 
         Thread.sleep(100);
 
+
+
         TestObj obj = new TestObj();
+        client_beta.send("alpha", obj);
+        // init preload
 
 
-        for (int i = 0; i < 10_000; i++) {
-            client_beta.send("alpha", obj, replyBuilder -> {
-                replyBuilder.on(String.class, (content, name) -> {
-                    System.out.println("réponse en texte: " + content);
-                });
-                replyBuilder.on(Integer.class, 600, (content, name) -> {
-                    System.out.println("réponse en int: " + content);
+        final AtomicLong chope = new AtomicLong();
+
+
+        final long start = System.currentTimeMillis();
+        for (int i = 0; i < 1_000_000; i++) {
+            client_beta.send("alpha", obj, (replyBuilder -> {
+                replyBuilder.on(Integer.class, (reply, name) -> {
+                   // System.out.println("Réponse integer de: " + chope.incrementAndGet());
+
+                    float newer = chope.incrementAndGet();
+                    float diff = System.currentTimeMillis() - start;
+
+                    System.out.println("Vitesse: " + (newer + "/" + diff + ": ") + (newer / diff));
                 });
                 replyBuilder.nothing((name) -> {
-                    System.out.println("rien eu de: " + name);
+                   // System.out.println("Rien eu: " + perdu.incrementAndGet());
                 });
-            });
-        }
+            }));
 
+           /* if (i % 5000 == 0) {
+                TimeUnit.NANOSECONDS.sleep(1);
+            } */
+
+
+
+        }
+        System.out.println(System.currentTimeMillis()-start);
+
+        /* client_alpha.close();
+        client_beta.close();
+        server.close();  */
 
         Thread.sleep(2_000);
 
-        server.close();
-        client_alpha.close();
-        client_beta.close();
 
         System.out.println("Closed");
 
