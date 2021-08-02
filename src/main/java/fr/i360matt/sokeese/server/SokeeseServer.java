@@ -117,8 +117,8 @@ public class SokeeseServer implements Closeable {
         this.catcherServer.unregister(clazz);
     }
 
-    public void unregisterAll (final Class<?> clazz) {
-        this.catcherServer.unregisterAll(clazz);
+    public void unregisterAll () {
+        this.catcherServer.unregisterAll();
     }
 
     public LoggedClient getClient (final String name) {

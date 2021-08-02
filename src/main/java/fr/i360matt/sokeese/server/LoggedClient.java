@@ -67,7 +67,7 @@ public class LoggedClient implements Closeable {
 
 
 
-    public synchronized void doSendStatus (final EventAbstract event) throws Exception {
+    private void doSendStatus (final EventAbstract event) throws Exception {
         final int code = event.getStatusCode();
         sender.writeInt(code);
         if (code == -1)
@@ -76,7 +76,7 @@ public class LoggedClient implements Closeable {
 
     }
 
-    public synchronized boolean doWaitLogin () throws IOException {
+    private boolean doWaitLogin () throws IOException {
         final CompletableFuture<Boolean> isgood = new CompletableFuture<>();
 
         final LoginEvent loginEvent = new LoginEvent();
@@ -157,7 +157,7 @@ public class LoggedClient implements Closeable {
         return this.clientName;
     }
 
-    public void sendOrThrow (final Object object) throws IOException {
+    public synchronized void sendOrThrow (final Object object) throws IOException {
         this.sender.writeObject(object);
         this.sender.flush();
     }
@@ -171,7 +171,7 @@ public class LoggedClient implements Closeable {
 
     // ________________________________ //
 
-    public void sendOrThrow (final String recipient, final Object object) throws IOException {
+    public synchronized void sendOrThrow (final String recipient, final Object object) throws IOException {
         RawPacket rawPacket = new RawPacket(recipient, object);
         this.sender.writeObject(rawPacket);
         this.sender.flush();
@@ -183,7 +183,7 @@ public class LoggedClient implements Closeable {
         } catch (final IOException ignored) { }
     }
 
-    public void sendOrThrow (final String[] recipients, final Object object) throws IOException {
+    public synchronized void sendOrThrow (final String[] recipients, final Object object) throws IOException {
         RawPacket rawPacket = new RawPacket(recipients, object);
         this.sender.writeObject(rawPacket);
         this.sender.flush();

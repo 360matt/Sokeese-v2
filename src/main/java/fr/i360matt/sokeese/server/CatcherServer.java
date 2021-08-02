@@ -48,9 +48,9 @@ public class CatcherServer implements Closeable {
         }
     }
 
-    public class ReplyExecuted {
-        final BiConsumer<Object, LoggedClient> biConsumer;
-        final ReplyBuilder builder;
+    public final class ReplyExecuted {
+        private final BiConsumer<Object, LoggedClient> biConsumer;
+        private final ReplyBuilder builder;
 
         public ReplyExecuted (final BiConsumer<Object, LoggedClient> biConsumer, final ReplyBuilder builder) {
             this.biConsumer = biConsumer;
@@ -161,7 +161,7 @@ public class CatcherServer implements Closeable {
         if (relatedMap != null) {
             // if reply is waited
 
-            ReplyExecuted candidate = relatedMap.get(reply.getObj().getClass());
+            final ReplyExecuted candidate = relatedMap.get(reply.getObj().getClass());
             if (candidate != null) {
                 // if reply class-type is waited
 

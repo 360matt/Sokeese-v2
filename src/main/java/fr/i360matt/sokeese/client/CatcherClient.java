@@ -34,7 +34,7 @@ public class CatcherClient implements Closeable {
         }
 
         public void reply (final Object obj) {
-            if (idRequest != -1) {
+            if (this.idRequest != -1) {
                 final RawReply rawReply = new RawReply(
                         this.senderName,
                         obj,
@@ -45,9 +45,9 @@ public class CatcherClient implements Closeable {
         }
     }
 
-    public class ReplyExecuted {
-        final BiConsumer<Object, String> biConsumer;
-        final ReplyBuilder builder;
+    public final class ReplyExecuted {
+        private final BiConsumer<Object, String> biConsumer;
+        private final ReplyBuilder builder;
 
         public ReplyExecuted (final BiConsumer<Object, String> biConsumer, final ReplyBuilder builder) {
             this.biConsumer = biConsumer;

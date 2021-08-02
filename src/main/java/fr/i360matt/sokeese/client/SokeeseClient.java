@@ -34,9 +34,11 @@ public class SokeeseClient implements Closeable {
         this.connect(new Socket(host, port), username, password);
     }
 
-    public synchronized void connect (final Socket _socket, final String username, final String password) throws IOException, RuntimeException, ClientCodeSentException, ClientCredentialsException, ClientAlreadyLoggedException, ClassNotFoundException {
-        this._socket = _socket;
-        this.executorService = Executors.newScheduledThreadPool(4);
+    public void connect (final Socket _socket, final String username, final String password) throws IOException, RuntimeException, ClientCodeSentException, ClientCredentialsException, ClientAlreadyLoggedException, ClassNotFoundException {
+        if (this._socket != null)
+            return;
+
+        this.executorService = Executors.newScheduledThreadPool(8);
         this.threadSafe = new CompletableFuture<>();
         try (final Socket socket = _socket) {
             try (final ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
@@ -139,7 +141,7 @@ public class SokeeseClient implements Closeable {
 
 
 
-    public void sendOrThrow (final Object object) throws IOException {
+    public synchronized void sendOrThrow (final Object object) throws IOException {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
@@ -156,7 +158,7 @@ public class SokeeseClient implements Closeable {
 
     // ________________________________ //
 
-    public void sendOrThrow (final String recipient, final Object object) throws IOException {
+    public synchronized void sendOrThrow (final String recipient, final Object object) throws IOException {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
@@ -171,7 +173,7 @@ public class SokeeseClient implements Closeable {
         } catch (final IOException ignored) { }
     }
 
-    public void sendOrThrow (final String recipient, final Object object, final Consumer<CatcherClient.ReplyBuilder> consumer) throws IOException {
+    public synchronized void sendOrThrow (final String recipient, final Object object, final Consumer<CatcherClient.ReplyBuilder> consumer) throws IOException {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
@@ -189,7 +191,7 @@ public class SokeeseClient implements Closeable {
     }
 
 
-    public void sendOrThrow (final String[] recipients, final Object object, final Consumer<CatcherClient.ReplyBuilder> consumer) throws IOException {
+    public synchronized void sendOrThrow (final String[] recipients, final Object object, final Consumer<CatcherClient.ReplyBuilder> consumer) throws IOException {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
@@ -206,7 +208,7 @@ public class SokeeseClient implements Closeable {
         } catch (final IOException ignored) { }
     }
 
-    public void sendOrThrow (final String[] recipients, final Object object) throws IOException {
+    public synchronized void sendOrThrow (final String[] recipients, final Object object) throws IOException {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
