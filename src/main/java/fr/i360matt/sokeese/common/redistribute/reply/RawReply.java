@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 public class RawReply implements Serializable {
 
+    private static final long serialVersionUID = 1841792979007601495L;
     private final String recipient;
     private final Object obj;
     private final long id;

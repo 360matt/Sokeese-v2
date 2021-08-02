@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 public class Reply implements Serializable {
 
+    private static final long serialVersionUID = 4468806040195850004L;
     private final String sender;
     private final Object obj;
     private final long id;

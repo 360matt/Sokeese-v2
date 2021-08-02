@@ -1,37 +1,41 @@
 package fr.i360matt.sokeese.common.redistribute;
 
 import java.io.Serializable;
+import java.util.Random;
 
 public class RawPacket implements Serializable {
 
-    private static long count = 0;
+    private static final Random random = new Random();
+
+
+    private static final long serialVersionUID = 8116309025896557669L;
 
     private final Object recipient;
     private final Object obj;
-    private final long id;
+    private final long idRequest;
 
 
     public RawPacket (final String recipient, final Object obj) {
         this.recipient = recipient;
         this.obj = obj;
-        this.id = count++;
+        this.idRequest = random.nextLong();
     }
 
     public RawPacket (final String[] recipient, final Object obj) {
         this.recipient = recipient;
         this.obj = obj;
-        this.id = count++;
+        this.idRequest = random.nextLong();
     }
 
     public Object getRecipient () {
-        return recipient;
+        return this.recipient;
     }
 
     public Object getObj () {
-        return obj;
+        return this.obj;
     }
 
     public long getId () {
-        return id;
+        return this.idRequest;
     }
 }
