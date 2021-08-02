@@ -26,42 +26,40 @@ public class LoggedClient implements Closeable {
 
     private String clientName;
 
-    public LoggedClient (final SokeeseServer server, final Socket socket, final PreLoginEvent preLoginEvent) throws Exception {
-        this.socket = socket;
-        this.server = server;
+    public LoggedClient (final SokeeseServer server, final Socket _socket, final PreLoginEvent preLoginEvent) throws Exception {
+        try (final Socket socket = _socket) {
+            this.socket = socket;
+            this.server = server;
 
-        try (final ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream())) {
-            this.sender = oos;
-            this.doSendStatus(preLoginEvent);
-            if (preLoginEvent.getStatusCode() < 0) {
-                throw new ServerCodeSentException(
-                        socket.getRemoteSocketAddress(),
-                        preLoginEvent.getStatusCode(),
-                        preLoginEvent.getStatusCustom()
-                );
-            }
-
-
-            try (final ObjectInputStream ois = new ObjectInputStream(this.socket.getInputStream())) {
-                this.receiver = ois;
-                if (this.doWaitLogin()) {
-                    try {
-                        this.isEnabled = true;
-                        while (this.isEnabled) {
-                            if (this.server.getSocketServer().isClosed()) break;
-
-                            this.server.getCatcherServer().call(this.receiver.readObject(), this);
-                        }
-                    } catch (final EOFException e) {
-                        throw e;
-                    } catch (final Exception e) { }
+            socket.setTcpNoDelay(true);
+            try (final ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(this.socket.getOutputStream()))) {
+                this.sender = oos;
+                this.doSendStatus(preLoginEvent);
+                if (preLoginEvent.getStatusCode() < 0) {
+                    throw new ServerCodeSentException(
+                            socket.getRemoteSocketAddress(),
+                            preLoginEvent.getStatusCode(),
+                            preLoginEvent.getStatusCustom()
+                    );
                 }
-            } finally {
-                this.server.getClientsManager().remove(clientName);
+
+                try (final ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(this.socket.getInputStream()))) {
+                    this.receiver = ois;
+                    if (this.doWaitLogin()) {
+                        try {
+                            this.isEnabled = true;
+                            while (this.isEnabled && this.server.getSocketServer() != null) {
+                                this.server.getCatcherServer().incomingRequest(this.receiver.readObject(), this);
+                            }
+                        } catch (final EOFException e) {
+                            throw e;
+                        } catch (final Exception ignored) {
+                        }
+                    }
+                } finally {
+                    this.server.getClientsManager().remove(this.clientName);
+                }
             }
-        } catch (final Exception e) {
-            this.socket.close();
-            throw e;
         }
     }
 
