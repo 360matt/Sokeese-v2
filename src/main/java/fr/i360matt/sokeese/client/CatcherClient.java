@@ -135,7 +135,7 @@ public class CatcherClient implements Closeable {
         simpleEvent.clear();
     }
 
-    public <A> void call (final A obj) {
+    public <A> void incomingRequest (final A obj) {
         if (obj instanceof Packet) {
             this.processPacket((Packet) obj);
             return;
@@ -145,11 +145,16 @@ public class CatcherClient implements Closeable {
             return;
         }
 
-        final OnRequest onRequest = new OnRequest(
-                null,
-                -1
-        );
-        this.callWithRequest(obj, onRequest);
+        this.callWithRequest(obj, EMPTY_onRequest);
+    }
+
+    public <A> void callWithRequest (final A obj, final OnRequest onRequest) {
+        final Set<BiConsumer<?, OnRequest>> hashset = simpleEvent.get(obj.getClass());
+        if (hashset != null) {
+            for (final BiConsumer<?, OnRequest> consumer : hashset) {
+                ((BiConsumer<A, OnRequest>) consumer).accept(obj, onRequest);
+            }
+        }
     }
 
     private void processReply (final Reply reply) {
@@ -163,15 +168,6 @@ public class CatcherClient implements Closeable {
 
                 candidate.removeToQueue(reply.getSender());
                 candidate.biConsumer.accept(reply.getObj(), reply.getSender());
-            }
-        }
-    }
-
-    public <A> void callWithRequest (final A obj, final OnRequest onRequest) {
-        final Set<BiConsumer<?, OnRequest>> hashset = simpleEvent.get(obj.getClass());
-        if (hashset != null) {
-            for (BiConsumer<?, OnRequest> consumer : hashset) {
-                ((BiConsumer<A, OnRequest>) consumer).accept(obj, onRequest);
             }
         }
     }

@@ -69,7 +69,7 @@ public class CatcherServer implements Closeable {
         }
     }
 
-    public class ReplyBuilder {
+    public final class ReplyBuilder {
         private final Map<Class<?>, ReplyExecuted> relatedMap;
         private ScheduledFuture<?> resultNothing;
 
@@ -132,11 +132,11 @@ public class CatcherServer implements Closeable {
         simpleEvents.remove(clazz);
     }
 
-    public void unregisterAll (final Class<?> clazz) {
+    public void unregisterAll () {
         simpleEvents.clear();
     }
 
-    public <A> void call (final A obj, final LoggedClient user) {
+    public <A> void incomingRequest (final A obj, final LoggedClient user) {
         if (obj instanceof RawPacket) {
             this.processRawPacket((RawPacket) obj, user);
             return;
@@ -147,6 +147,15 @@ public class CatcherServer implements Closeable {
             return;
         }
 
+        this.processDirectObject(obj);
+
+    }
+
+    public <A> void processDirectObject (final A obj) {
+        this.callWithRequest(obj, EMPTY_onRequest);
+    }
+
+    public <A> void callWithRequest (final A obj, final OnRequest onRequest) {
         final Set<BiConsumer<?, OnRequest>> hashset = simpleEvents.get(obj.getClass());
         if (hashset != null) {
             final OnRequest onRequest = new OnRequest(user, -1);
@@ -157,7 +166,7 @@ public class CatcherServer implements Closeable {
     }
 
 
-    private void processReply (final Reply reply, final LoggedClient client) {
+    private void processReply (final RawReply reply, final LoggedClient client) {
         final Map<Class<?>, ReplyExecuted> relatedMap = complexEvents.get(reply.getId());
         if (relatedMap != null) {
             // if reply is waited
@@ -166,10 +175,8 @@ public class CatcherServer implements Closeable {
             if (candidate != null) {
                 // if reply class-type is waited
 
-                candidate.removeToQueue(reply.getSender());
                 candidate.biConsumer.accept(reply.getObj(), client);
-
-                relatedMap.remove(reply.getObj().getClass());
+                candidate.removeToQueue(client.getClientName());
             }
         }
     }
