@@ -47,11 +47,10 @@ public class SokeeseClient implements Closeable {
             try (final ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()))) {
                 this.receiver = ois;
                 this.doWaitServerStatus(username, password);
-                try (final ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream())) {
+                try (final ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
                     this.sender = oos;
                     this.doSendCredentials(username, password);
                     this.doWaitLoginStatus(username, password);
-
 
                     this.threadSafe.complete(null);
                     this.threadSafe = null;
@@ -59,13 +58,13 @@ public class SokeeseClient implements Closeable {
                     this.isEnabled = true;
                     while (this.isEnabled) {
                         if (!socket.isClosed()) {
-                            this.catcherClient.call(this.receiver.readObject());
+                            this.catcherClient.incomingRequest(this.receiver.readObject());
                             continue;
                         }
                         break;
                     }
 
-                    // normal run here ...
+                    // the client will shuting down here ...
                 }
             }
         } catch (final Exception e) {
@@ -181,7 +180,12 @@ public class SokeeseClient implements Closeable {
             this.threadSafe.join();
 
         final RawPacket rawPacket = new RawPacket(recipient, object);
-        consumer.accept(this.catcherClient.getReplyBuilder(rawPacket.getId(), rawPacket.getRecipient()));
+
+        final CatcherClient.ReplyBuilder replyBuilder = this.catcherClient.getReplyBuilder(
+                rawPacket.getId(),
+                rawPacket.getRecipient()
+        );
+        consumer.accept(replyBuilder);
 
         this.sender.writeObject(rawPacket);
         this.sender.flush();
@@ -246,7 +250,6 @@ public class SokeeseClient implements Closeable {
     public synchronized void sendOrThrow (final String recipient, final Object... objectArray) throws IOException {
         if (this.threadSafe != null)
             this.threadSafe.join();
-
         for (final Object obj : objectArray) {
             final RawPacket rawPacket = new RawPacket(recipient, obj);
             this.sender.writeObject(rawPacket);
