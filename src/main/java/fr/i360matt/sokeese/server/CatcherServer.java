@@ -70,7 +70,7 @@ public class CatcherServer implements Closeable {
     }
 
     public final class ReplyBuilder {
-        private final Map<Class<?>, ReplyExecuted> relatedMap;
+        private Map<Class<?>, ReplyExecuted> relatedMap;
         private ScheduledFuture<?> resultNothing;
 
         private final long idRequest;
@@ -103,6 +103,10 @@ public class CatcherServer implements Closeable {
 
             server.getExecutorService().schedule(() -> {
                 this.relatedMap.remove(clazz);
+                if (this.relatedMap.isEmpty()) {
+                    complexEvents.remove(this.idRequest);
+                    this.relatedMap = null;
+                }
             }, delay, TimeUnit.MILLISECONDS);
             return this;
         }

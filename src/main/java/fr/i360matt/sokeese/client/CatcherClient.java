@@ -67,7 +67,7 @@ public class CatcherClient implements Closeable {
     }
 
     public final class ReplyBuilder {
-        private final Map<Class<?>, ReplyExecuted> relatedMap = new ConcurrentHashMap<>();
+        private Map<Class<?>, ReplyExecuted> relatedMap = new ConcurrentHashMap<>();
         private ScheduledFuture<?> resultNothing;
 
         private final long idRequest;
@@ -97,6 +97,10 @@ public class CatcherClient implements Closeable {
 
             client.getExecutorService().schedule(() -> {
                 this.relatedMap.remove(clazz);
+                if (this.relatedMap.isEmpty()) {
+                    complexEvents.remove(this.idRequest);
+                    this.relatedMap = null;
+                }
             }, delay, TimeUnit.MILLISECONDS);
             return this;
         }
