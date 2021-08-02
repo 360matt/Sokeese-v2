@@ -38,8 +38,8 @@ public class CatcherServer implements Closeable {
 
         public void reply (final Object obj) {
             if (idRequest != -1) {
-                final RawReply rawReply = new RawReply(
-                        this.loggedClient.getClientName(),
+                final Reply rawReply = new Reply(
+                        "",
                         obj,
                         this.idRequest
                 );
