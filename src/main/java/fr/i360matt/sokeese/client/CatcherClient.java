@@ -83,7 +83,7 @@ public class CatcherClient implements Closeable {
         }
 
         public <A> ReplyBuilder on (final Class<A> clazz, final BiConsumer<Object, String> biConsumer) {
-            return this.on(clazz, 200, biConsumer);
+            return this.on(clazz, 3000, biConsumer);
         }
 
         public <A> ReplyBuilder on (final Class<A> clazz, int delay, final BiConsumer<Object, String> biConsumer) {
