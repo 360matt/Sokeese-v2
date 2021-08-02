@@ -96,6 +96,8 @@ public class CatcherServer implements Closeable {
             final ReplyExecuted replyExecuted = new ReplyExecuted(biConsumer, this);
             this.relatedMap.put(clazz, replyExecuted);
 
+            if (delay < 3000)
+                delay = 3000;
             if (delay > this.maxDelay)
                 maxDelay = delay;
 
