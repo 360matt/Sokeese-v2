@@ -58,10 +58,13 @@ public class CatcherServer implements Closeable {
         }
 
         public void removeToQueue (final String clientName) {
-            if (this.builder.recipIsList) {
-                this.builder.recipientList.remove(clientName);
+            if (this.builder.recipient instanceof List) {
+                ((List) this.builder.recipient).remove(clientName);
             } else {
-                this.builder.recipientString = null;
+                // this.builder.recipient = null;
+                if (this.builder.resultNothing != null) {
+                    this.builder.resultNothing.cancel(true);
+                }
             }
         }
     }
@@ -69,23 +72,17 @@ public class CatcherServer implements Closeable {
     public class ReplyBuilder {
         private final Map<Class<?>, ReplyExecuted> relatedMap;
 
-        private final boolean recipIsList;
-
-        private String recipientString;
-        private List<String> recipientList;
+        private final long idRequest;
+        private final Object recipient;
 
         private int maxDelay;
 
         public ReplyBuilder (final long idRequest, final Object recipient) {
             this.relatedMap = new ConcurrentHashMap<>();
 
-            if (recipient instanceof String) {
-                this.recipIsList = false;
-                this.recipientString = (String) recipient;
-            } else {
-                this.recipIsList = true;
-                this.recipientList = new ArrayList<>(Arrays.asList((String[]) recipient));
-            }
+
+            this.idRequest = idRequest;
+            this.recipient = recipient;
 
             complexEvents.put(idRequest, this.relatedMap);
         }
@@ -108,14 +105,14 @@ public class CatcherServer implements Closeable {
         }
 
         public void nothing (final Consumer<String> consumer) {
-            server.getExecutorService().schedule(() -> {
-                if (this.recipIsList) {
-                    for (final String candidate : this.recipientList)
+            this.resultNothing = server.getExecutorService().schedule(() -> {
+                if (this.recipient instanceof List) {
+                    for (final String candidate : ((List<String>) this.recipient))
                         consumer.accept(candidate);
-                } else if (this.recipientString != null) {
-                    consumer.accept(this.recipientString);
+                } else if (this.recipient != null) {
+                    consumer.accept((String) this.recipient);
                 }
-            }, this.maxDelay*1000L + 100L, TimeUnit.MICROSECONDS);
+            }, maxDelay, TimeUnit.MILLISECONDS);
         }
     }
 
