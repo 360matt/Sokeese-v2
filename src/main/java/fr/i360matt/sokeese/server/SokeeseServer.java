@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 public class SokeeseServer implements Closeable {
 
     private final int port;
-    private ServerSocket server;
+    private ServerSocket _server;
 
     private ScheduledExecutorService executorService;
     private final EventsServer events = new EventsServer();
@@ -30,38 +30,40 @@ public class SokeeseServer implements Closeable {
 
     public SokeeseServer (final ServerSocket server) {
         this.port = server.getLocalPort();
-        this.server = server;
+        this._server = server;
     }
 
     public synchronized void listen () throws IOException {
-        if (this.server == null)
-            this.server = new ServerSocket(this.port);
+        if (this._server == null)
+            this._server = new ServerSocket(this.port);
 
-        this.executorService = Executors.newScheduledThreadPool(4);
+        try (final ServerSocket server = _server) {
+            this.executorService = Executors.newScheduledThreadPool(4);
 
-        while (this.server != null && !this.server.isClosed()) {
-            final PreLoginEvent event = new PreLoginEvent();
-            this.events.execEvent(this.events.getPreLogin(), event, (code, custom) -> {
-                try {
-                    final Socket socket = this.server.accept();
-                    executorService.execute(() -> {
-                        try {
-                            new LoggedClient(this, socket, event);
-                        } catch (Exception e) {
-                            event.callException(e);
-                        }
-                    });
-                } catch (Exception e) {
-                    event.callException(e);
-                    this.close();
-                }
-            });
-        }
+            while (!server.isClosed()) {
+                final PreLoginEvent event = new PreLoginEvent();
+                this.events.execEvent(this.events.getPreLogin(), event, (code, custom) -> {
+                    try {
+                        final Socket socket = server.accept();
+                        executorService.execute(() -> {
+                            try {
+                                new LoggedClient(this, socket, event);
+                            } catch (Exception e) {
+                                event.callException(e);
+                            }
+                        });
+                    } catch (Exception e) {
+                        event.callException(e);
+                        this.close();
+                    }
+                });
+            }
 
-        this.clientsManager.close();
-        if (!this.executorService.isShutdown()) {
-            this.executorService.shutdownNow();
-            this.executorService = null;
+            this.clientsManager.close();
+            if (!this.executorService.isShutdown()) {
+                this.executorService.shutdownNow();
+                this.executorService = null;
+            }
         }
     }
 
@@ -79,7 +81,7 @@ public class SokeeseServer implements Closeable {
     }
 
     public ServerSocket getSocketServer () {
-        return server;
+        return this._server;
     }
 
     protected ScheduledExecutorService getExecutorService () {
@@ -88,9 +90,9 @@ public class SokeeseServer implements Closeable {
 
     public void close () {
         try {
-            if (this.server != null) {
-                this.server.close();
-                this.server = null;
+            if (this._server != null) {
+                this._server.close();
+                this._server = null;
             }
         } catch (final Exception ignored) { }
     }
