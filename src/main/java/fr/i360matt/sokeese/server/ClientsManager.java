@@ -10,7 +10,7 @@ public class ClientsManager implements Closeable {
 
     private final Map<String, LoggedClient> users = new HashMap<>();
 
-    public void add (final String username, final LoggedClient instance) {
+    protected void add (final String username, final LoggedClient instance) {
         this.users.put(username, instance);
     }
 
@@ -34,7 +34,7 @@ public class ClientsManager implements Closeable {
         return this.users.containsKey(username);
     }
 
-    public void remove (final String username) {
+    protected void remove (final String username) {
         this.users.remove(username);
     }
 
