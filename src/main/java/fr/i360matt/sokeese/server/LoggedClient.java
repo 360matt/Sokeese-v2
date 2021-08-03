@@ -156,7 +156,7 @@ public class LoggedClient implements Closeable {
     }
 
     public synchronized void sendOrThrow (final Object object) throws IOException {
-        this.sender.writeObject(object);
+        this.sender.writeUnshared(object);
         this.sender.flush();
     }
 
@@ -171,7 +171,7 @@ public class LoggedClient implements Closeable {
 
     public synchronized void sendOrThrow (final String recipient, final Object object) throws IOException {
         RawPacket rawPacket = new RawPacket(recipient, object);
-        this.sender.writeObject(rawPacket);
+        this.sender.writeUnshared(rawPacket);
         this.sender.flush();
     }
 
@@ -183,7 +183,7 @@ public class LoggedClient implements Closeable {
 
     public synchronized void sendOrThrow (final String[] recipients, final Object object) throws IOException {
         RawPacket rawPacket = new RawPacket(recipients, object);
-        this.sender.writeObject(rawPacket);
+        this.sender.writeUnshared(rawPacket);
         this.sender.flush();
     }
 
@@ -198,7 +198,7 @@ public class LoggedClient implements Closeable {
 
     public synchronized void sendOrThrow (final Object... objectArray) throws IOException {
         for (final Object obj : objectArray)
-            this.sender.writeObject(obj);
+            this.sender.writeUnshared(obj);
         this.sender.flush();
     }
 
@@ -211,7 +211,7 @@ public class LoggedClient implements Closeable {
     public synchronized void sendOrThrow (final String recipient, final Object... objectArray) throws IOException {
         for (final Object obj : objectArray) {
             final RawPacket rawPacket = new RawPacket(recipient, obj);
-            this.sender.writeObject(rawPacket);
+            this.sender.writeUnshared(rawPacket);
         }
         this.sender.flush();
     }

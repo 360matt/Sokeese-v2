@@ -147,7 +147,7 @@ public class SokeeseClient implements Closeable {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
-        this.sender.writeObject(object);
+        this.sender.writeUnshared(object);
         this.sender.flush();
     }
 
@@ -165,7 +165,7 @@ public class SokeeseClient implements Closeable {
             this.threadSafe.join();
 
         RawPacket rawPacket = new RawPacket(recipient, object);
-        this.sender.writeObject(rawPacket);
+        this.sender.writeUnshared(rawPacket);
         this.sender.flush();
     }
 
@@ -187,7 +187,7 @@ public class SokeeseClient implements Closeable {
         );
         consumer.accept(replyBuilder);
 
-        this.sender.writeObject(rawPacket);
+        this.sender.writeUnshared(rawPacket);
         this.sender.flush();
     }
 
@@ -205,7 +205,7 @@ public class SokeeseClient implements Closeable {
         final RawPacket rawPacket = new RawPacket(recipients, object);
         consumer.accept(this.catcherClient.getReplyBuilder(rawPacket.getId(), rawPacket.getRecipient()));
 
-        this.sender.writeObject(rawPacket);
+        this.sender.writeUnshared(rawPacket);
         this.sender.flush();
     }
 
@@ -220,7 +220,7 @@ public class SokeeseClient implements Closeable {
             this.threadSafe.join();
 
         RawPacket rawPacket = new RawPacket(recipients, object);
-        this.sender.writeObject(rawPacket);
+        this.sender.writeUnshared(rawPacket);
         this.sender.flush();
     }
 
@@ -237,7 +237,7 @@ public class SokeeseClient implements Closeable {
         if (this.threadSafe != null)
             this.threadSafe.join();
         for (final Object obj : objectArray)
-            this.sender.writeObject(obj);
+            this.sender.writeUnshared(obj);
         this.sender.flush();
     }
 
@@ -252,7 +252,7 @@ public class SokeeseClient implements Closeable {
             this.threadSafe.join();
         for (final Object obj : objectArray) {
             final RawPacket rawPacket = new RawPacket(recipient, obj);
-            this.sender.writeObject(rawPacket);
+            this.sender.writeUnshared(rawPacket);
         }
         this.sender.flush();
     }
