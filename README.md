@@ -180,3 +180,85 @@ server.send(new String[]{"one", "two", "three"}, new Object(), (replyBuilder -> 
 }));
 // send to multiple client an object and catch replies
 ```
+
+## Init a client  
+```java
+SokeeseClient client_alpha = new SokeeseClient();
+
+new Thread(() -> {
+  try {
+    client.connect("127.0.0.1", 4000, "name", "password");
+    System.out.println("Alpha closed");
+  } catch (IOException | RuntimeException | ClientCodeSentException | ClientCredentialsException | ClientAlreadyLoggedException | ClassNotFoundException  e) {
+    e.printStackTrace();
+  }
+}).start();
+
+client.close();
+// close the server, close socket, in/out
+
+client.on(TestObj.class, (obj, event) -> {
+    // obj is type of TestObj
+
+    event.getClientName(); // get sender name
+
+    event.reply(""); // reply String
+    event.reply(0); // reply int
+    event.reply(new Object()); // reply Object
+});
+
+client.send(new Object());
+client.sendOrThrow(new Object());
+// send to server an object
+
+
+
+client.send("recipient's name", new Object());
+client.sendOrThrow("recipient's name", new Object());
+// send to a client an object
+
+client.send("recipient's name", new Object(), new Object());
+client.sendOrThrow("recipient's name", new Object(), new Object());
+// send to a client multiple objects
+
+client.send(new String[]{"one", "two"}, new Object());
+client.sendOrThrow(new String[]{"one", "two"}, new Object());
+// send to multiple client an object
+
+client.send(new String[]{"one", "two"}, new Object(), new Object());
+client.sendOrThrow(new String[]{"one", "two"}, new Object(), new Object());
+// send to multiple client multiples objects
+
+
+// _______________________________________________________________________
+
+client.send("recipient's name", new Object(), replyBuilder -> {
+    replyBuilder.on(String.class, (obj, clientName) -> {
+
+    });
+});
+
+client.sendOrThrow("recipient's name", new Object(), replyBuilder -> {
+    // ...
+});
+
+client.sendOrThrow(new String[]{"one", "two"}, new Object(), replyBuilder -> {
+    // ...
+});
+
+// _______________________________________________________________________
+
+
+client.send("*", new Object());
+// send to everyone without server
+
+client.send("**", new Object());
+// send to everyone WITH server
+
+client.send("", new Object());
+client.send((String) null, new Object());
+// send to server
+
+// reply builder is available for server / everyone
+
+```
