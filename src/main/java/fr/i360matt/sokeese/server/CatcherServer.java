@@ -136,6 +136,9 @@ public final class CatcherServer implements Closeable {
     public CatcherServer (final SokeeseServer server) {
         this.server = server;
     }
+    public ReplyBuilder getReplyBuilder (final long idRequest, final Object recipient) {
+        return new ReplyBuilder(idRequest, recipient);
+    }
 
 
     public <A> void on (final Class<A> clazz, final BiConsumer<A, OnRequest> biConsumer) {
