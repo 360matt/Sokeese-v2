@@ -2,6 +2,7 @@ package fr.i360matt.sokeese.server;
 
 import fr.i360matt.sokeese.common.EventAbstract;
 import fr.i360matt.sokeese.common.StatusCode;
+import fr.i360matt.sokeese.common.redistribute.Packet;
 import fr.i360matt.sokeese.common.redistribute.RawPacket;
 import fr.i360matt.sokeese.server.events.LoginEvent;
 import fr.i360matt.sokeese.server.events.PreLoginEvent;
@@ -11,8 +12,8 @@ import fr.i360matt.sokeese.server.exceptions.ServerCredentialsException;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 public class LoggedClient implements Closeable {
 
@@ -166,36 +167,6 @@ public class LoggedClient implements Closeable {
         } catch (final IOException ignored) { }
     }
 
-
-    // ________________________________ //
-
-    public synchronized void sendOrThrow (final String recipient, final Object object) throws IOException {
-        RawPacket rawPacket = new RawPacket(recipient, object);
-        this.sender.writeUnshared(rawPacket);
-        this.sender.flush();
-    }
-
-    public void send (final String recipient, final Object object) {
-        try {
-            this.sendOrThrow(recipient, object);
-        } catch (final IOException ignored) { }
-    }
-
-    public synchronized void sendOrThrow (final String[] recipients, final Object object) throws IOException {
-        RawPacket rawPacket = new RawPacket(recipients, object);
-        this.sender.writeUnshared(rawPacket);
-        this.sender.flush();
-    }
-
-    public void send (final String[] recipients, final Object object) {
-        try {
-            this.sendOrThrow(recipients, object);
-        } catch (final IOException ignored) { }
-    }
-
-    // ________________________________ //
-
-
     public synchronized void sendOrThrow (final Object... objectArray) throws IOException {
         for (final Object obj : objectArray)
             this.sender.writeUnshared(obj);
@@ -208,17 +179,23 @@ public class LoggedClient implements Closeable {
         } catch (final IOException ignored) { }
     }
 
-    public synchronized void sendOrThrow (final String recipient, final Object... objectArray) throws IOException {
-        for (final Object obj : objectArray) {
-            final RawPacket rawPacket = new RawPacket(recipient, obj);
-            this.sender.writeUnshared(rawPacket);
-        }
+
+    public synchronized void sendOrThrow (final Object object, final Consumer<CatcherServer.ReplyBuilder> consumer) throws IOException {
+        final Packet packet = new Packet(object, "", RawPacket.random.nextLong());
+
+        final CatcherServer.ReplyBuilder replyBuilder = this.server.getCatcherServer().getReplyBuilder(
+                packet.getIdRequest(),
+                this.getClientName()
+        );
+        consumer.accept(replyBuilder);
+
+        this.sender.writeUnshared(packet);
         this.sender.flush();
     }
 
-    public void send (final String recipient, final Object... objectArray) {
+    public void send (final Object object, final Consumer<CatcherServer.ReplyBuilder> consumer) {
         try {
-            this.sendOrThrow(recipient, objectArray);
+            this.sendOrThrow(object, consumer);
         } catch (final IOException ignored) { }
     }
 
