@@ -49,7 +49,7 @@ public class LoggedClient implements Closeable {
                         try {
                             this.isEnabled = true;
                             while (this.isEnabled && this.server.getSocketServer() != null) {
-                                this.server.getCatcherServer().incomingRequest(this.receiver.readObject(), this);
+                                this.server.getCatcherServer().incomingRequest(this.receiver.readUnshared(), this);
                             }
                         } catch (final EOFException e) {
                             throw e;

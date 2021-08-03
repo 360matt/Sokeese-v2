@@ -58,7 +58,7 @@ public class SokeeseClient implements Closeable {
                     this.isEnabled = true;
                     while (this.isEnabled) {
                         if (!socket.isClosed()) {
-                            this.catcherClient.incomingRequest(this.receiver.readObject());
+                            this.catcherClient.incomingRequest(this.receiver.readUnshared());
                             continue;
                         }
                         break;
