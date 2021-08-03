@@ -54,68 +54,68 @@ server.disconnectAll();
 
 ### Events
 ```java
-        server.addLoginEvent((loginEvent -> {
-            loginEvent.getClientName(); // client's name who want to connect
-            loginEvent.getPassword(); // client's password who want to connect
+server.addLoginEvent((loginEvent -> {
 
-            loginEvent.getSocket(); // get client's Socket connection
+    loginEvent.getClientName(); // client's name who want to connect
+    loginEvent.getPassword(); // client's password who want to connect
 
-            // if other registered event has set status to INVALID_CREDENTIALS
-            loginEvent.onException(ServerCredentialsException.class, (exEvent) -> {
-                // exEvent is ServerCredentialsException type
-            });
+    loginEvent.getSocket(); // get client's Socket connection
 
-            loginEvent.onException(IOException.class, (exEvent) -> {
-                // catch a IO exception here
-            });
+    // if other registered event has set status to INVALID_CREDENTIALS
+    loginEvent.onException(ServerCredentialsException.class, (exEvent) -> {
+		// exEvent is ServerCredentialsException type
+    });
 
-
-
-            loginEvent.setStatus(StatusCode.OK);
-            // the status codes are Integer,
-            // you must respect the protocol code by helping you with the StatusCode class.
-
-            loginEvent.setStatus("A custom error message, will be throw by client.");
-            // You can define your own status as a String,
-            // however, this will be considered an error code.
+    loginEvent.onException(IOException.class, (exEvent) -> {
+		// catch a IO exception here
+    });
 
 
-            // IMPORTANT !!
-            // if you define an error code,
-            // the event is canceled and the rest of the events will not be executed,
-            // so it will be impossible to modify the status code again.
+
+    loginEvent.setStatus(StatusCode.OK);
+    // the status codes are Integer,
+    // you must respect the protocol code by helping you with the StatusCode class.
+
+    loginEvent.setStatus("A custom error message, will be throw by client.");
+    // You can define your own status as a String,
+    // however, this will be considered an error code.
 
 
-            //you won't need these methods,
-            // they will always return 0 - ""
-            int code = loginEvent.getStatusCode();
-            String custom = loginEvent.getStatusCustom();
-
-            loginEvent.freeze(100);
-            // freeze the event for 100ms AFTER all event.
-
-            loginEvent.freeze(0);
-            // remove freeze also
+    // IMPORTANT !!
+    // if you define an error code,
+    // the event is canceled and the rest of the events will not be executed,
+    // so it will be impossible to modify the status code again.
 
 
-        }));
+    //you won't need these methods,
+    // they will always return 0 - ""
+    int code = loginEvent.getStatusCode();
+    String custom = loginEvent.getStatusCustom();
+
+    loginEvent.freeze(100);
+    // freeze the event for 100ms AFTER all event.
+
+    loginEvent.freeze(0);
+    // remove freeze also
+
+}));
 ```
 
 ### Requests event per type
 ```java
-        server.on(TestObj.class, (obj, request) -> {
-            // obj is type of TestObj
+server.on(TestObj.class, (obj, request) -> {
+    // obj is type of TestObj
 
-            request.getClientName(); // the sender of request
+    request.getClientName(); // the sender of request
 
-            request.reply(0);
-            request.reply("");
-            request.reply(new Object());
+    request.reply(0);
+    request.reply("");
+    request.reply(new Object());
 
-            LoggedClient loggedClient = request.getClientInstance();
-            // get the client instance.
-            // you can per example: disconnect, etc ...
-        });
+    LoggedClient loggedClient = request.getClientInstance();
+    // get the client instance.
+    // you can per example: disconnect, etc ...
+});
 ```
 
 ### ClientLogged instance
