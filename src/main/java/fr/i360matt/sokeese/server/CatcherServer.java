@@ -59,12 +59,16 @@ public class CatcherServer implements Closeable {
         }
 
         public void removeToQueue (final String clientName) {
-            if (this.builder.recipient instanceof List) {
-                ((List) this.builder.recipient).remove(clientName);
-            } else {
-                // this.builder.recipient = null;
-                if (this.builder.resultNothing != null) {
-                    this.builder.resultNothing.cancel(true);
+            if (!server.getExecutorService().isShutdown()) {
+                if (this.builder.recipient instanceof List) {
+                    ((List) this.builder.recipient).remove(clientName);
+                    if (((List) this.builder.recipient).isEmpty()) {
+                        this.builder.resultNothing.cancel(true);
+                    }
+                } else {
+                    if (this.builder.resultNothing != null) {
+                        this.builder.resultNothing.cancel(true);
+                    }
                 }
             }
         }
@@ -102,25 +106,29 @@ public class CatcherServer implements Closeable {
             if (delay > this.maxDelay)
                 maxDelay = delay;
 
-            server.getExecutorService().schedule(() -> {
-                this.relatedMap.remove(clazz);
-                if (this.relatedMap.isEmpty()) {
-                    complexEvents.remove(this.idRequest);
-                    this.relatedMap = null;
-                }
-            }, delay, TimeUnit.MILLISECONDS);
+            if (!server.getExecutorService().isShutdown()) {
+                server.getExecutorService().schedule(() -> {
+                    this.relatedMap.remove(clazz);
+                    if (this.relatedMap.isEmpty()) {
+                        complexEvents.remove(this.idRequest);
+                        this.relatedMap = null;
+                    }
+                }, delay, TimeUnit.MILLISECONDS);
+            }
             return this;
         }
 
         public void nothing (final Consumer<String> consumer) {
-            this.resultNothing = server.getExecutorService().schedule(() -> {
-                if (this.recipient instanceof List) {
-                    for (final String candidate : ((List<String>) this.recipient))
-                        consumer.accept(candidate);
-                } else if (this.recipient != null) {
-                    consumer.accept((String) this.recipient);
-                }
-            }, maxDelay, TimeUnit.MILLISECONDS);
+            if (!server.getExecutorService().isShutdown()) {
+                this.resultNothing = server.getExecutorService().schedule(() -> {
+                    if (this.recipient instanceof List) {
+                        for (final String candidate : ((List<String>) this.recipient))
+                            consumer.accept(candidate);
+                    } else if (this.recipient != null) {
+                        consumer.accept((String) this.recipient);
+                    }
+                }, maxDelay, TimeUnit.MILLISECONDS);
+            }
         }
     }
 
