@@ -26,6 +26,10 @@ public class ClientsManager implements Closeable {
         return this.users.values();
     }
 
+    public int getCount () {
+        return this.users.size();
+    }
+
     public boolean exist (final String username) {
         return this.users.containsKey(username);
     }
