@@ -7,14 +7,14 @@ import fr.i360matt.sokeese.server.SokeeseServer;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class TestServer {
+public class TestDebug {
 
 
 
     public static void main (String[] args) throws InterruptedException, IOException {
 
-        System.out.println("Waiting you ready ...");
-        System.in.read();
+        // System.out.println("Waiting you ready ...");
+        // System.in.read();
 
         SokeeseServer server = new SokeeseServer(4000);
 
@@ -67,39 +67,45 @@ public class TestServer {
         // init preload
 
 
-        final AtomicLong chope = new AtomicLong();
 
 
-        final long start = System.currentTimeMillis();
-        for (int i = 0; i < 1_000_000; i++) {
-            client_beta.send("alpha", obj, (replyBuilder -> {
-                replyBuilder.on(Integer.class, (reply, name) -> {
-                   // System.out.println("Réponse integer de: " + chope.incrementAndGet());
+        for (int k = 0; k < 10_000; k++) {
+            final AtomicLong chope = new AtomicLong();
+            final long start = System.currentTimeMillis();
+            for (int i = 0; i < 100; i++) {
+                client_beta.send("alpha", obj, (replyBuilder -> {
+                    replyBuilder.on(Integer.class, (reply, name) -> {
+                        // System.out.println("Réponse integer de: " + chope.incrementAndGet());
 
-                    float newer = chope.incrementAndGet();
-                    float diff = System.currentTimeMillis() - start;
+                        float newer = chope.incrementAndGet();
+                        float diff = System.currentTimeMillis() - start;
 
-                    System.out.println("Vitesse: " + (newer + "/" + diff + ": ") + (newer / diff));
-                });
-                replyBuilder.nothing((name) -> {
-                   // System.out.println("Rien eu: " + perdu.incrementAndGet());
-                });
-            }));
-
-           /* if (i % 5000 == 0) {
-                TimeUnit.NANOSECONDS.sleep(1);
-            } */
-
-
-
+                        System.out.println("Vitesse: " + (newer + "/" + diff + ": ") + (newer / diff));
+                    });
+                    replyBuilder.nothing((name) -> {
+                        // System.out.println("Rien eu: " + perdu.incrementAndGet());
+                    });
+                }));
+            }
+            System.out.println(System.currentTimeMillis()-start);
+            Thread.sleep(200);
         }
-        System.out.println(System.currentTimeMillis()-start);
+
+        client_alpha.close();
+        client_beta.close();
+        server.close();
+
+        System.gc();
+
+
+
+       // System.out.println(System.currentTimeMillis()-start);
 
         /* client_alpha.close();
         client_beta.close();
         server.close();  */
 
-        Thread.sleep(2_000);
+
 
 
         System.out.println("Closed");
