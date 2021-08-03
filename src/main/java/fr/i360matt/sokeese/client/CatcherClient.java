@@ -13,30 +13,30 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class CatcherClient implements Closeable {
+public final class CatcherClient implements Closeable {
 
     private final Map<Class<?>, Set<BiConsumer<?, OnRequest>>> simpleEvent = new HashMap<>();
     private final Map<Long, Map<Class<?>, ReplyExecuted>> complexEvents = new ConcurrentHashMap<>();
 
-    protected final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
+    private final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
 
     public final class OnRequest {
-        private final String senderName;
+        private final String clientName;
         private final long idRequest;
 
-        public OnRequest (final String senderName, final long idRequest) {
-            this.senderName = senderName;
+        public OnRequest (final String clientName, final long idRequest) {
+            this.clientName = clientName;
             this.idRequest = idRequest;
         }
 
-        public String getSenderName () {
-            return this.senderName;
+        public String getClientName () {
+            return this.clientName;
         }
 
         public void reply (final Object obj) {
             if (this.idRequest != -1) {
                 final RawReply rawReply = new RawReply(
-                        this.senderName,
+                        this.clientName,
                         obj,
                         this.idRequest
                 );
@@ -149,7 +149,7 @@ public class CatcherClient implements Closeable {
         simpleEvent.clear();
     }
 
-    public <A> void incomingRequest (final A obj) {
+    public void incomingRequest (final Object obj) {
         if (obj instanceof Packet) {
             this.processPacket((Packet) obj);
             return;
@@ -162,11 +162,11 @@ public class CatcherClient implements Closeable {
         this.callWithRequest(obj, EMPTY_onRequest);
     }
 
-    public <A> void callWithRequest (final A obj, final OnRequest onRequest) {
+    public void callWithRequest (final Object obj, final OnRequest onRequest) {
         final Set<BiConsumer<?, OnRequest>> hashset = simpleEvent.get(obj.getClass());
         if (hashset != null) {
             for (final BiConsumer<?, OnRequest> consumer : hashset) {
-                ((BiConsumer<A, OnRequest>) consumer).accept(obj, onRequest);
+                ((BiConsumer) consumer).accept(obj, onRequest);
             }
         }
     }

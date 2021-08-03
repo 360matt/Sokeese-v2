@@ -3,7 +3,7 @@ package fr.i360matt.sokeese.common.redistribute;
 import java.io.Serializable;
 import java.util.Random;
 
-public class RawPacket implements Serializable {
+public final class RawPacket implements Serializable {
 
     private static final Random random = new Random();
 

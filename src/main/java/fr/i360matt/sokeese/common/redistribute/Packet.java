@@ -2,7 +2,7 @@ package fr.i360matt.sokeese.common.redistribute;
 
 import java.io.Serializable;
 
-public class Packet implements Serializable {
+public final class Packet implements Serializable {
 
     private final Object obj;
     private final String sender;

@@ -13,14 +13,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class CatcherServer implements Closeable {
+public final class CatcherServer implements Closeable {
 
     private final Map<Class<?>, Set<BiConsumer<?, OnRequest>>> simpleEvents = new HashMap<>();
     private final Map<Long, Map<Class<?>, ReplyExecuted>> complexEvents = new ConcurrentHashMap<>();
 
-    protected final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
+    private final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
 
-    public static class OnRequest {
+    public static final class OnRequest {
         private final LoggedClient loggedClient;
         private final long idRequest;
 
@@ -151,7 +151,7 @@ public class CatcherServer implements Closeable {
         simpleEvents.clear();
     }
 
-    public <A> void incomingRequest (final A obj, final LoggedClient user) {
+    public void incomingRequest (final Object obj, final LoggedClient user) {
         if (obj instanceof RawPacket) {
             this.processRawPacket((RawPacket) obj, user);
             return;
@@ -166,15 +166,15 @@ public class CatcherServer implements Closeable {
 
     }
 
-    public <A> void processDirectObject (final A obj) {
+    public void processDirectObject (final Object obj) {
         this.callWithRequest(obj, EMPTY_onRequest);
     }
 
-    public <A> void callWithRequest (final A obj, final OnRequest onRequest) {
+    public void callWithRequest (final Object obj, final OnRequest onRequest) {
         final Set<BiConsumer<?, OnRequest>> hashset = simpleEvents.get(obj.getClass());
         if (hashset != null) {
             for (BiConsumer<?, OnRequest> consumer : hashset) {
-                ((BiConsumer<A, OnRequest>) consumer).accept(obj, onRequest);
+                ((BiConsumer) consumer).accept(obj, onRequest);
             }
         }
     }
