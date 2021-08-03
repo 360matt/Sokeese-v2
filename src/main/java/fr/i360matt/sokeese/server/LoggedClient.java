@@ -82,7 +82,7 @@ public class LoggedClient implements Closeable {
         loginEvent.setClientName(this.receiver.readUTF());
         loginEvent.setPassword(this.receiver.readUTF());
 
-        if (Objects.equals(loginEvent.getClientName(), "")) {
+        if (loginEvent.getClientName() == null || loginEvent.getClientName().equals("") || loginEvent.getClientName().equals("*") || loginEvent.getClientName().equals("**")) {
             loginEvent.setStatus(StatusCode.Login.INVALID_CREDENTIALS);
 
         } else if (this.server.getClientsManager().exist(loginEvent.getClientName())) {

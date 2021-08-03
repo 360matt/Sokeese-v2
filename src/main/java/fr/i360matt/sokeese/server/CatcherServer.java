@@ -243,14 +243,36 @@ public final class CatcherServer implements Closeable {
                 return;
             }
 
-            final LoggedClient candidate = server.getClient(recipient);
-            if (candidate != null) {
+            if (recipient.equals("*")) {
                 final Packet packet = new Packet(
                         rawPacket.getObj(),
                         user.getClientName(),
                         rawPacket.getId()
                 );
-                candidate.send(packet);
+
+                for (final LoggedClient client : this.server.getClientsManager().getInstances())
+                    client.send(packet);
+            } else if (recipient.equals("**")) {
+                final Packet packet = new Packet(
+                        rawPacket.getObj(),
+                        user.getClientName(),
+                        rawPacket.getId()
+                );
+
+                for (final LoggedClient client : this.server.getClientsManager().getInstances())
+                    client.send(packet);
+
+                this.processPacket(rawPacket, user);
+            } else {
+                final LoggedClient candidate = server.getClient(recipient);
+                if (candidate != null) {
+                    final Packet packet = new Packet(
+                            rawPacket.getObj(),
+                            user.getClientName(),
+                            rawPacket.getId()
+                    );
+                    candidate.send(packet);
+                }
             }
         } else if (rawPacket.getRecipient() instanceof String[]) {
             final String[] fixedRecipient = (String[]) Arrays.stream((String[]) rawPacket.getRecipient()).distinct().toArray();
