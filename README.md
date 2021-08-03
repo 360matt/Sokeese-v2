@@ -131,6 +131,13 @@ client.send(new Object(), new Object(), new Object());
 client.sendOrThrow(new Object(), new Object(), new Object());
 // send to a client multiples objects
 
+client.send(new Object(), (replyBuilder -> {
+  replyBuilder.on(String.class, (obj, instance) -> {
+    // instance is current instance.
+  });
+}));
+// send to the client and wait reply
+
 client.getClientName();
 // get the client name
 
@@ -157,4 +164,19 @@ server.send("recipient's name", new Object(), new Object());
 
 server.send(new String[]{"one", "two"}, new Object(), new Object());
 // send to multiples client multiples Objects
+
+server.send("recipient's name", new Object(), (replyBuilder -> {
+  replyBuilder.on(String.class, (obj, client) -> {
+
+  });
+ }));
+// send to client an object and catch reply
+
+
+server.send(new String[]{"one", "two", "three"}, new Object(), (replyBuilder -> {
+  replyBuilder.on(String.class, (obj, client) -> {
+
+  });
+}));
+// send to multiple client an object and catch replies
 ```
