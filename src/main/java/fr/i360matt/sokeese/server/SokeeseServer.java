@@ -1,5 +1,6 @@
 package fr.i360matt.sokeese.server;
 
+import fr.i360matt.sokeese.common.redistribute.Packet;
 import fr.i360matt.sokeese.common.redistribute.RawPacket;
 import fr.i360matt.sokeese.server.events.LoginEvent;
 import fr.i360matt.sokeese.server.events.PreLoginEvent;
@@ -149,8 +150,7 @@ public class SokeeseServer implements Closeable {
         for (final String candidateName : recipients) {
             final LoggedClient loggedClient = this.clientsManager.get(candidateName);
             if (loggedClient != null) {
-                RawPacket rawPacket = new RawPacket(recipients, object);
-                loggedClient.send(rawPacket);
+                loggedClient.send(object);
             }
         }
     }
@@ -159,25 +159,47 @@ public class SokeeseServer implements Closeable {
         for (final String candidateName : recipients) {
             final LoggedClient loggedClient = this.clientsManager.get(candidateName);
             if (loggedClient != null) {
-                RawPacket rawPacket = new RawPacket(recipients, object);
-                loggedClient.send(rawPacket);
+                loggedClient.send(object);
+            }
+        }
+    }
+
+    public void send (final String recipient, final Object object, final Consumer<CatcherServer.ReplyBuilder> consumer) {
+        try {
+            final LoggedClient loggedClient = this.clientsManager.get(recipient);
+            if (loggedClient != null) {
+                loggedClient.sendOrThrow(object, consumer);
+            }
+
+        } catch (final IOException ignored) { }
+    }
+
+    public void send (final String[] recipients, final Object object, final Consumer<CatcherServer.ReplyBuilder> consumer) {
+        final Packet packet = new Packet(object, "", RawPacket.random.nextLong());
+
+        final CatcherServer.ReplyBuilder replyBuilder = this.getCatcherServer().getReplyBuilder(
+                packet.getIdRequest(),
+                recipients
+        );
+        consumer.accept(replyBuilder);
+
+        for (final String candidateName : recipients) {
+            final LoggedClient loggedClient = this.clientsManager.get(candidateName);
+            if (loggedClient != null) {
+                loggedClient.send(packet);
             }
         }
     }
 
     public void sendtoAll (final Object object) {
         for (final LoggedClient loggedClient : this.clientsManager.getInstances()) {
-            if (loggedClient != null) {
-                loggedClient.send(object);
-            }
+            loggedClient.send(object);
         }
     }
 
     public void sendtoAll (final Object... objectArray) {
         for (final LoggedClient loggedClient : this.clientsManager.getInstances()) {
-            if (loggedClient != null) {
-                loggedClient.send(objectArray);
-            }
+            loggedClient.send(objectArray);
         }
     }
 
