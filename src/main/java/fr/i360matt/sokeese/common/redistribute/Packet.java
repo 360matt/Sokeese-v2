@@ -4,7 +4,6 @@ import java.io.Serializable;
 
 public class Packet implements Serializable {
 
-    private static final long serialVersionUID = -6842057406799744194L;
     private final Object obj;
     private final String sender;
     private final long idRequest;

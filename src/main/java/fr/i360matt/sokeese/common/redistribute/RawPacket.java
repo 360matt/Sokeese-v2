@@ -8,8 +8,6 @@ public class RawPacket implements Serializable {
     private static final Random random = new Random();
 
 
-    private static final long serialVersionUID = 8116309025896557669L;
-
     private final Object recipient;
     private final Object obj;
     private final long idRequest;
