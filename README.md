@@ -32,6 +32,10 @@ new Thread(() -> {
      e.printStackTrace();
   }
 }).start();
+
+
+server.close();
+// close the server, close socket, in/out
 ```
 
 ### Clients manager:
@@ -195,8 +199,13 @@ new Thread(() -> {
 }).start();
 
 client.close();
-// close the server, close socket, in/out
+// close the client, close socket, in/out
 
+
+```
+
+## Events
+```java
 client.on(TestObj.class, (obj, event) -> {
     // obj is type of TestObj
 
