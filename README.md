@@ -206,7 +206,10 @@ client.on(TestObj.class, (obj, event) -> {
     event.reply(0); // reply int
     event.reply(new Object()); // reply Object
 });
+```
 
+## Send data
+```java
 client.send(new Object());
 client.sendOrThrow(new Object());
 // send to server an object
@@ -260,5 +263,4 @@ client.send((String) null, new Object());
 // send to server
 
 // reply builder is available for server / everyone
-
 ```
