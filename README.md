@@ -23,7 +23,7 @@ This rich and varied library will greatly facilitate development, it is very lig
 <dependency>
     <groupId>io.github.360matt</groupId>
     <artifactId>Sokeese-v2</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>2.0-SNAPSHOT</version>
 </dependency>
 ```
 
