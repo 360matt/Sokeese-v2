@@ -18,6 +18,15 @@ This rich and varied library will greatly facilitate development, it is very lig
 * Retransmission (client -> client(s))
 * Reply (A -> server -> B -> server -> A)
 
+## Maven
+```
+<dependency>
+    <groupId>io.github.360matt</groupId>
+    <artifactId>Sokeese-v2</artifactId>
+    <version>1.0-SNAPSHOT</version>
+</dependency>
+```
+
 ## Init a server:
 ```java
 SokeeseServer server = new SokeeseServer(4000);
