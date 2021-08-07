@@ -42,10 +42,14 @@ public class SokeeseServer implements Closeable {
             this.executorService = Executors.newScheduledThreadPool(4);
 
             while (!server.isClosed()) {
+                final Socket socket = server.accept();
+
                 final PreLoginEvent event = new PreLoginEvent();
+                event.setSocket(socket);
+
                 this.events.execEvent(this.events.getPreLogin(), event, (code, custom) -> {
                     try {
-                        final Socket socket = server.accept();
+
                         executorService.execute(() -> {
                             try {
                                 new LoggedClient(this, socket, event);
