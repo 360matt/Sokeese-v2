@@ -20,6 +20,12 @@ This rich and varied library will greatly facilitate development, it is very lig
 
 ## Maven
 ```
+<repositories>
+    <repository>
+        <id>bungeecord-repo</id>
+        <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </repository>
+</repositories>
 <dependency>
     <groupId>io.github.360matt</groupId>
     <artifactId>Sokeese-v2</artifactId>
