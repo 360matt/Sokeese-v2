@@ -1,8 +1,8 @@
 package fr.i360matt.sokeese.server;
 
 import fr.i360matt.sokeese.common.redistribute.Packet;
-import fr.i360matt.sokeese.common.redistribute.RawPacket;
-import fr.i360matt.sokeese.common.redistribute.reply.RawReply;
+import fr.i360matt.sokeese.common.redistribute.SendPacket;
+import fr.i360matt.sokeese.common.redistribute.reply.SendReply;
 import fr.i360matt.sokeese.common.redistribute.reply.Reply;
 
 import java.io.Closeable;
@@ -155,13 +155,13 @@ public final class CatcherServer implements Closeable {
     }
 
     public void incomingRequest (final Object obj, final LoggedClient user) {
-        if (obj instanceof RawPacket) {
-            this.processRawPacket((RawPacket) obj, user);
+        if (obj instanceof SendPacket) {
+            this.processRawPacket((SendPacket) obj, user);
             return;
         }
 
-        if (obj instanceof RawReply) {
-            this.processRawReply((RawReply) obj, user);
+        if (obj instanceof SendReply) {
+            this.processRawReply((SendReply) obj, user);
             return;
         }
 
@@ -183,7 +183,7 @@ public final class CatcherServer implements Closeable {
     }
 
 
-    private void processReply (final RawReply reply, final LoggedClient client) {
+    private void processReply (final SendReply reply, final LoggedClient client) {
         final Map<Class<?>, ReplyExecuted> relatedMap = complexEvents.get(reply.getId());
         if (relatedMap != null) {
             // if reply is waited
@@ -198,7 +198,7 @@ public final class CatcherServer implements Closeable {
         }
     }
 
-    private void processPacket (final RawPacket packet, final LoggedClient client) {
+    private void processPacket (final SendPacket packet, final LoggedClient client) {
         final OnRequest onRequest = new OnRequest(
                 client,
                 packet.getId()
@@ -207,82 +207,82 @@ public final class CatcherServer implements Closeable {
         this.callWithRequest(packet.getObj(), onRequest);
     }
 
-    private void processRawReply (final RawReply rawReply, final LoggedClient client) {
-        if (rawReply.getObj() instanceof RawPacket || rawReply.getObj() instanceof Packet) {
+    private void processRawReply (final SendReply sendReply, final LoggedClient client) {
+        if (sendReply.getObj() instanceof SendPacket || sendReply.getObj() instanceof Packet) {
             return;
             // fixed exploit/bug: infinite recursive.
         }
 
 
-        if (rawReply.getRecipient() instanceof String) {
-            final LoggedClient candidate = server.getClient((String) rawReply.getRecipient());
+        if (sendReply.getRecipient() instanceof String) {
+            final LoggedClient candidate = server.getClient((String) sendReply.getRecipient());
             if (candidate != null) {
                 final Reply reply = new Reply(
                         client.getClientName(),
-                        rawReply.getObj(),
-                        rawReply.getId()
+                        sendReply.getObj(),
+                        sendReply.getId()
                 );
                 candidate.send(reply);
             }
         } else {
-            this.processReply(rawReply, client);
+            this.processReply(sendReply, client);
         }
     }
 
-    private void processRawPacket (final RawPacket rawPacket, final LoggedClient user) {
-        if (rawPacket.getObj() instanceof RawPacket || rawPacket.getObj() instanceof Packet) {
+    private void processRawPacket (final SendPacket sendPacket, final LoggedClient user) {
+        if (sendPacket.getObj() instanceof SendPacket || sendPacket.getObj() instanceof Packet) {
             return;
             // fixed exploit/bug: infinite recursive.
         }
 
-        if (rawPacket.getRecipient() instanceof String) {
-            final String recipient = (String) rawPacket.getRecipient();
+        if (sendPacket.getRecipient() instanceof String) {
+            final String recipient = (String) sendPacket.getRecipient();
             if (recipient.equals("")) {
                 // empty recipient = the recipient is server
-                this.processPacket(rawPacket, user);
+                this.processPacket(sendPacket, user);
                 return;
             }
 
             if (recipient.equals("*")) {
                 final Packet packet = new Packet(
-                        rawPacket.getObj(),
+                        sendPacket.getObj(),
                         user.getClientName(),
-                        rawPacket.getId()
+                        sendPacket.getId()
                 );
 
                 for (final LoggedClient client : this.server.getClientsManager().getInstances())
                     client.send(packet);
             } else if (recipient.equals("**")) {
                 final Packet packet = new Packet(
-                        rawPacket.getObj(),
+                        sendPacket.getObj(),
                         user.getClientName(),
-                        rawPacket.getId()
+                        sendPacket.getId()
                 );
 
                 for (final LoggedClient client : this.server.getClientsManager().getInstances())
                     client.send(packet);
 
-                this.processPacket(rawPacket, user);
+                this.processPacket(sendPacket, user);
             } else {
                 final LoggedClient candidate = server.getClient(recipient);
                 if (candidate != null) {
                     final Packet packet = new Packet(
-                            rawPacket.getObj(),
+                            sendPacket.getObj(),
                             user.getClientName(),
-                            rawPacket.getId()
+                            sendPacket.getId()
                     );
                     candidate.send(packet);
                 }
             }
-        } else if (rawPacket.getRecipient() instanceof String[]) {
-            final String[] fixedRecipient = (String[]) Arrays.stream((String[]) rawPacket.getRecipient()).distinct().toArray();
+        } else if (sendPacket.getRecipient() instanceof String[]) {
+            final String[] fixedRecipient = (String[]) Arrays.stream((String[]) sendPacket.getRecipient()).distinct().toArray();
             // fixed exploit/bug: amplified DDoS with multiple same client name.
 
             Packet packet = null;
 
             for (final String candidateName : fixedRecipient) {
                 if (candidateName == null) {
-                    this.processPacket(rawPacket, user);
+                    this.processPacket(sendPacket, user);
                     continue;
                 }
 
@@ -290,9 +290,9 @@ public final class CatcherServer implements Closeable {
                 if (candidate != null) {
                     if (packet == null) {
                         packet = new Packet(
-                                rawPacket.getObj(),
+                                sendPacket.getObj(),
                                 user.getClientName(),
-                                rawPacket.getId()
+                                sendPacket.getId()
                         );
                     }
                     candidate.send(packet);
@@ -300,7 +300,7 @@ public final class CatcherServer implements Closeable {
             }
         } else {
             // empty recipient = the recipient is server
-            this.processPacket(rawPacket, user);
+            this.processPacket(sendPacket, user);
         }
 
     }

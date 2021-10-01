@@ -1,7 +1,5 @@
 import fr.i360matt.sokeese.client.SokeeseClient;
-import fr.i360matt.sokeese.client.exceptions.ClientAlreadyLoggedException;
-import fr.i360matt.sokeese.client.exceptions.ClientCodeSentException;
-import fr.i360matt.sokeese.client.exceptions.ClientCredentialsException;
+import fr.i360matt.sokeese.common.SokeeseException;
 
 import java.io.IOException;
 
@@ -14,7 +12,7 @@ public class RunAlpha {
             try {
                 client_alpha.connect("127.0.0.1", 4000, "alpha", "escargot");
                 System.out.println("Alpha closed");
-            } catch (IOException | RuntimeException | ClientCodeSentException | ClientCredentialsException | ClientAlreadyLoggedException | ClassNotFoundException  e) {
+            } catch (IOException | RuntimeException | ClassNotFoundException | SokeeseException e) {
                 e.printStackTrace();
             }
         }).start();

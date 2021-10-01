@@ -1,10 +1,8 @@
 package fr.i360matt.sokeese.client;
 
-import fr.i360matt.sokeese.client.exceptions.ClientAlreadyLoggedException;
-import fr.i360matt.sokeese.client.exceptions.ClientCodeSentException;
-import fr.i360matt.sokeese.client.exceptions.ClientCredentialsException;
+import fr.i360matt.sokeese.common.SokeeseException;
 import fr.i360matt.sokeese.common.StatusCode;
-import fr.i360matt.sokeese.common.redistribute.RawPacket;
+import fr.i360matt.sokeese.common.redistribute.SendPacket;
 
 import java.io.*;
 import java.net.Socket;
@@ -30,11 +28,11 @@ public class SokeeseClient implements Closeable {
 
 
 
-    public void connect (final String host, final int port, final String username, final String password) throws IOException, ClientCodeSentException, ClientCredentialsException, ClientAlreadyLoggedException, ClassNotFoundException {
+    public void connect (final String host, final int port, final String username, final String password) throws IOException, ClassNotFoundException, SokeeseException {
         this.connect(new Socket(host, port), username, password);
     }
 
-    public void connect (final Socket _socket, final String username, final String password) throws IOException, RuntimeException, ClientCodeSentException, ClientCredentialsException, ClientAlreadyLoggedException, ClassNotFoundException {
+    public void connect (final Socket _socket, final String username, final String password) throws IOException, RuntimeException, ClassNotFoundException, SokeeseException {
         if (this._socket != null)
             return;
 
@@ -44,12 +42,11 @@ public class SokeeseClient implements Closeable {
             this._socket = socket;
             socket.setTcpNoDelay(true);
 
-            try (final ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()))) {
-                this.receiver = ois;
-                this.doWaitServerStatus(username, password);
-                try (final ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
-                    this.sender = oos;
-                    this.doSendCredentials(username, password);
+            try (final ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
+                this.sender = oos;
+                this.doSendCredentials(username, password);
+                try (final ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()))) {
+                    this.receiver = ois;
                     this.doWaitLoginStatus(username, password);
 
                     this.threadSafe.complete(null);
@@ -63,7 +60,6 @@ public class SokeeseClient implements Closeable {
                         }
                         break;
                     }
-
                     // the client will shuting down here ...
                 }
             }
@@ -77,51 +73,31 @@ public class SokeeseClient implements Closeable {
         }
     }
 
-    private void doWaitServerStatus (final String username, final String password) throws IOException, ClientCodeSentException {
-        final int statusConnect = this.receiver.readInt();
-        String customStatusLogin = "";
-        if (statusConnect != 0) {
-            if (statusConnect == -1) {
-                customStatusLogin = this.receiver.readUTF();
-            }
-            throw new ClientCodeSentException(statusConnect, customStatusLogin, username, password);
-        }
-    }
-
     private void doSendCredentials (final String username, final String password) throws IOException {
         this.sender.writeUTF(username);
         this.sender.writeUTF(password);
         this.sender.flush();
     }
 
-    private void doWaitLoginStatus (final String username, final String password) throws IOException, ClientCredentialsException, ClientCodeSentException, ClientAlreadyLoggedException {
+    private void doWaitLoginStatus (final String username, final String password) throws IOException, SokeeseException {
         final int statusLogin = this.receiver.readInt();
 
-        if (statusLogin < 0) {
-            if (statusLogin == StatusCode.Login.INVALID_CREDENTIALS) {
-                throw new ClientCredentialsException(
-                        statusLogin,
-                        null,
-                        username,
-                        password
-                );
-            } else if (statusLogin == StatusCode.Login.ALREADY_LOGGED) {
-                throw new ClientAlreadyLoggedException(
-                        statusLogin,
-                        null,
-                        username
-                );
-            }
+        if (statusLogin < StatusCode.OK.getCode()) {
+            final SokeeseException sokeeseException = new SokeeseException();
+            sokeeseException.setUsername(username);
+            sokeeseException.setPassword(password);
 
-            String customStatusLogin = "";
-            if (statusLogin == -1)
-                customStatusLogin = this.receiver.readUTF();
-            throw new ClientCodeSentException(
-                    statusLogin,
-                    customStatusLogin,
-                    username,
-                    password
-            );
+            if (statusLogin == StatusCode.CREDENTIALS.getCode()) {
+                sokeeseException.setType(StatusCode.CREDENTIALS);
+                throw sokeeseException;
+            } else if (statusLogin == StatusCode.ALREADY_LOGGED.getCode()) {
+                sokeeseException.setType(StatusCode.ALREADY_LOGGED);
+                throw sokeeseException;
+            } else if (statusLogin == StatusCode.OTHER.getCode()) {
+                sokeeseException.setType(StatusCode.OTHER);
+                sokeeseException.setCustomType(this.receiver.readUTF());
+                throw sokeeseException;
+            }
         }
     }
 
@@ -164,8 +140,8 @@ public class SokeeseClient implements Closeable {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
-        RawPacket rawPacket = new RawPacket(recipient, object);
-        this.sender.writeUnshared(rawPacket);
+        SendPacket sendPacket = new SendPacket(recipient, object);
+        this.sender.writeUnshared(sendPacket);
         this.sender.flush();
     }
 
@@ -179,15 +155,15 @@ public class SokeeseClient implements Closeable {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
-        final RawPacket rawPacket = new RawPacket(recipient, object);
+        final SendPacket sendPacket = new SendPacket(recipient, object);
 
         final CatcherClient.ReplyBuilder replyBuilder = this.catcherClient.getReplyBuilder(
-                rawPacket.getId(),
-                rawPacket.getRecipient()
+                sendPacket.getId(),
+                sendPacket.getRecipient()
         );
         consumer.accept(replyBuilder);
 
-        this.sender.writeUnshared(rawPacket);
+        this.sender.writeUnshared(sendPacket);
         this.sender.flush();
     }
 
@@ -202,10 +178,10 @@ public class SokeeseClient implements Closeable {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
-        final RawPacket rawPacket = new RawPacket(recipients, object);
-        consumer.accept(this.catcherClient.getReplyBuilder(rawPacket.getId(), rawPacket.getRecipient()));
+        final SendPacket sendPacket = new SendPacket(recipients, object);
+        consumer.accept(this.catcherClient.getReplyBuilder(sendPacket.getId(), sendPacket.getRecipient()));
 
-        this.sender.writeUnshared(rawPacket);
+        this.sender.writeUnshared(sendPacket);
         this.sender.flush();
     }
 
@@ -219,8 +195,8 @@ public class SokeeseClient implements Closeable {
         if (this.threadSafe != null)
             this.threadSafe.join();
 
-        RawPacket rawPacket = new RawPacket(recipients, object);
-        this.sender.writeUnshared(rawPacket);
+        SendPacket sendPacket = new SendPacket(recipients, object);
+        this.sender.writeUnshared(sendPacket);
         this.sender.flush();
     }
 
@@ -251,8 +227,8 @@ public class SokeeseClient implements Closeable {
         if (this.threadSafe != null)
             this.threadSafe.join();
         for (final Object obj : objectArray) {
-            final RawPacket rawPacket = new RawPacket(recipient, obj);
-            this.sender.writeUnshared(rawPacket);
+            final SendPacket sendPacket = new SendPacket(recipient, obj);
+            this.sender.writeUnshared(sendPacket);
         }
         this.sender.flush();
     }

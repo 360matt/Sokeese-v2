@@ -1,9 +1,9 @@
 package fr.i360matt.sokeese.server;
 
 import fr.i360matt.sokeese.common.redistribute.Packet;
-import fr.i360matt.sokeese.common.redistribute.RawPacket;
+import fr.i360matt.sokeese.common.redistribute.SendPacket;
+import fr.i360matt.sokeese.server.events.ServerEventManager;
 import fr.i360matt.sokeese.server.events.LoginEvent;
-import fr.i360matt.sokeese.server.events.PreLoginEvent;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -20,7 +20,7 @@ public class SokeeseServer implements Closeable {
     private ServerSocket _server;
 
     private ScheduledExecutorService executorService;
-    private final EventsServer events = new EventsServer();
+    private final ServerEventManager events = new ServerEventManager();
     private final ClientsManager clientsManager = new ClientsManager();
     private final CatcherServer catcherServer = new CatcherServer(this);
 
@@ -44,22 +44,11 @@ public class SokeeseServer implements Closeable {
             while (!server.isClosed()) {
                 final Socket socket = server.accept();
 
-                final PreLoginEvent event = new PreLoginEvent();
-                event.setSocket(socket);
-
-                this.events.execEvent(this.events.getPreLogin(), event, (code, custom) -> {
+                executorService.execute(() -> {
                     try {
-
-                        executorService.execute(() -> {
-                            try {
-                                new LoggedClient(this, socket, event);
-                            } catch (Exception e) {
-                                event.callException(e);
-                            }
-                        });
+                        new LoggedClient(this, socket);
                     } catch (Exception e) {
-                        event.callException(e);
-                        this.close();
+                        e.printStackTrace();
                     }
                 });
             }
@@ -73,7 +62,7 @@ public class SokeeseServer implements Closeable {
     }
 
 
-    protected EventsServer getEvents () {
+    protected ServerEventManager getEvents () {
         return this.events;
     }
 
@@ -110,10 +99,6 @@ public class SokeeseServer implements Closeable {
 
     public void addLoginEvent (final Consumer<LoginEvent> event) {
         this.events.getLogin().add(event);
-    }
-
-    public void addPreLoginEvent (final Consumer<PreLoginEvent> event) {
-        this.events.getPreLogin().add(event);
     }
 
     public <A> void on (final Class<A> clazz, final BiConsumer<A, CatcherServer.OnRequest> biConsumer) {
@@ -179,7 +164,7 @@ public class SokeeseServer implements Closeable {
     }
 
     public void send (final String[] recipients, final Object object, final Consumer<CatcherServer.ReplyBuilder> consumer) {
-        final Packet packet = new Packet(object, "", RawPacket.random.nextLong());
+        final Packet packet = new Packet(object, "", SendPacket.random.nextLong());
 
         final CatcherServer.ReplyBuilder replyBuilder = this.getCatcherServer().getReplyBuilder(
                 packet.getIdRequest(),

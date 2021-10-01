@@ -1,7 +1,5 @@
 import fr.i360matt.sokeese.client.SokeeseClient;
-import fr.i360matt.sokeese.client.exceptions.ClientAlreadyLoggedException;
-import fr.i360matt.sokeese.client.exceptions.ClientCodeSentException;
-import fr.i360matt.sokeese.client.exceptions.ClientCredentialsException;
+import fr.i360matt.sokeese.common.SokeeseException;
 import fr.i360matt.sokeese.server.SokeeseServer;
 
 import java.io.IOException;
@@ -11,7 +9,7 @@ public class TestDebug {
 
 
 
-    public static void main (String[] args) throws InterruptedException, IOException {
+    public static void main (String[] args) throws InterruptedException {
 
         // System.out.println("Waiting you ready ...");
         // System.in.read();
@@ -37,7 +35,7 @@ public class TestDebug {
             try {
                 client_alpha.connect("127.0.0.1", 4000, "alpha", "escargot");
                 System.out.println("Alpha closed");
-            } catch (IOException | RuntimeException | ClientCodeSentException | ClientCredentialsException | ClientAlreadyLoggedException | ClassNotFoundException  e) {
+            } catch (IOException | RuntimeException | ClassNotFoundException | SokeeseException e) {
                 e.printStackTrace();
             }
         }).start();
@@ -46,7 +44,7 @@ public class TestDebug {
             try {
                 client_beta.connect("127.0.0.1", 4000, "beta", "escargot");
                 System.out.println("beta closed");
-            } catch (IOException | RuntimeException | ClientCodeSentException | ClientCredentialsException | ClientAlreadyLoggedException | ClassNotFoundException  e) {
+            } catch (IOException | RuntimeException | ClassNotFoundException | SokeeseException e) {
                 e.printStackTrace();
             }
         }).start();

@@ -1,4 +1,6 @@
-package fr.i360matt.sokeese.common;
+package fr.i360matt.sokeese.server.events;
+
+import fr.i360matt.sokeese.common.StatusCode;
 
 import java.util.function.Consumer;
 
@@ -7,8 +9,22 @@ public abstract class EventAbstract {
     protected boolean reLoop = false;
     protected int freeeze = 0;
 
-    protected int statusCode = 0;
+    protected StatusCode statusCode = StatusCode.OK;
     protected String statusCustom;
+
+    protected Consumer<Exception> exceptConsumer;
+    protected Exception exception;
+
+    public void onException (final Consumer<Exception> consumer) {
+        this.exceptConsumer = consumer;
+    }
+    public void callException (final Exception ex) {
+        this.exception = ex;
+    }
+
+    public abstract void callEvent (final ServerEventManager server);
+
+    public abstract void callback ();
 
     public void freeze (final int ms) {
         if (this.freeeze < ms) this.freeeze = ms;
@@ -27,11 +43,11 @@ public abstract class EventAbstract {
         this.reLoop = stat;
     }
 
-    public int getStatusCode () {
+    public StatusCode getStatusCode () {
         return statusCode;
     }
 
-    public void setStatus (final int code) {
+    public void setStatus (final StatusCode code) {
         this.statusCode = code;
     }
 
@@ -40,13 +56,11 @@ public abstract class EventAbstract {
     }
 
     public void setStatus (final String customCode) {
-        this.statusCode = -1;
+        this.statusCode = StatusCode.OTHER;
         this.statusCustom = customCode;
     }
 
-    public abstract void onException (final Class<? extends Exception> ex, final Consumer<?> consumer);
 
-    public abstract void callException (final Exception ex);
 
 
 }

@@ -1,14 +1,10 @@
 package fr.i360matt.sokeese.server;
 
-import fr.i360matt.sokeese.common.EventAbstract;
+import fr.i360matt.sokeese.server.events.EventAbstract;
 import fr.i360matt.sokeese.common.StatusCode;
 import fr.i360matt.sokeese.common.redistribute.Packet;
-import fr.i360matt.sokeese.common.redistribute.RawPacket;
+import fr.i360matt.sokeese.common.redistribute.SendPacket;
 import fr.i360matt.sokeese.server.events.LoginEvent;
-import fr.i360matt.sokeese.server.events.PreLoginEvent;
-import fr.i360matt.sokeese.server.exceptions.ServerAlreadyLoggedException;
-import fr.i360matt.sokeese.server.exceptions.ServerCodeSentException;
-import fr.i360matt.sokeese.server.exceptions.ServerCredentialsException;
 
 import java.io.*;
 import java.net.Socket;
@@ -27,7 +23,7 @@ public class LoggedClient implements Closeable {
 
     private String clientName;
 
-    public LoggedClient (final SokeeseServer server, final Socket _socket, final PreLoginEvent preLoginEvent) throws Exception {
+    public LoggedClient (final SokeeseServer server, final Socket _socket) throws Exception {
         try (final Socket socket = _socket) {
             this.socket = socket;
             this.server = server;
@@ -35,15 +31,6 @@ public class LoggedClient implements Closeable {
             socket.setTcpNoDelay(true);
             try (final ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(this.socket.getOutputStream()))) {
                 this.sender = oos;
-                this.doSendStatus(preLoginEvent);
-                if (preLoginEvent.getStatusCode() < 0) {
-                    throw new ServerCodeSentException(
-                            socket.getRemoteSocketAddress(),
-                            preLoginEvent.getStatusCode(),
-                            preLoginEvent.getStatusCustom()
-                    );
-                }
-
                 try (final ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(this.socket.getInputStream()))) {
                     this.receiver = ois;
                     if (this.doWaitLogin()) {
@@ -67,9 +54,9 @@ public class LoggedClient implements Closeable {
 
 
     private void doSendStatus (final EventAbstract event) throws Exception {
-        final int code = event.getStatusCode();
-        sender.writeInt(code);
-        if (code == -1)
+        final StatusCode statusCode = event.getStatusCode();
+        sender.writeInt(statusCode.getCode());
+        if (statusCode.getCode() == StatusCode.OTHER.getCode())
             sender.writeUTF(event.getStatusCustom());
         sender.flush();
 
@@ -78,62 +65,64 @@ public class LoggedClient implements Closeable {
     private boolean doWaitLogin () throws IOException {
         final CompletableFuture<Boolean> isgood = new CompletableFuture<>();
 
-        final LoginEvent loginEvent = new LoginEvent();
+        LoggedClient loggedClient = this;
+
+        final LoginEvent loginEvent = new LoginEvent() {
+            @Override
+            public void callback () {
+                try {
+                    doSendStatus(this);
+
+                    if (this.getStatusCode().getCode() < StatusCode.OK.getCode()) {
+                        final ServerException serverException = new ServerException();
+                        serverException.setSocket(getSocket());
+                        serverException.setAddress(getSocket().getRemoteSocketAddress());
+                        serverException.setUsername(getClientName());
+                        serverException.setPassword(getPassword());
+
+                        if (this.getStatusCode() == StatusCode.CREDENTIALS) {
+                            serverException.setType(StatusCode.CREDENTIALS);
+                            throw serverException;
+                        } else if (this.getStatusCode() == StatusCode.ALREADY_LOGGED) {
+                            serverException.setType(StatusCode.ALREADY_LOGGED);
+                            throw serverException;
+                        } else {
+                            serverException.setType(StatusCode.OTHER);
+                            serverException.setCustomType(this.getStatusCustom());
+                            throw serverException;
+                        }
+                    }
+
+                    loggedClient.clientName = this.getClientName();
+                    loggedClient.getServer().getClientsManager().add(clientName, loggedClient);
+
+                    isgood.complete(true);
+                } catch (final Exception ex) {
+                    callException(ex);
+                    isgood.complete(false);
+                    loggedClient.close(); // close the server
+                }
+            }
+        };
+
         loginEvent.setSocket(this.socket);
         loginEvent.setClientName(this.receiver.readUTF());
         loginEvent.setPassword(this.receiver.readUTF());
 
-        if (loginEvent.getClientName() == null || loginEvent.getClientName().equals("") || loginEvent.getClientName().equals("*") || loginEvent.getClientName().equals("**")) {
-            loginEvent.setStatus(StatusCode.Login.INVALID_CREDENTIALS);
-
-        } else if (this.server.getClientsManager().exist(loginEvent.getClientName())) {
-            loginEvent.setStatus(StatusCode.Login.ALREADY_LOGGED);
+        if (loginEvent.getClientName() == null)
+            loginEvent.setStatus(StatusCode.CREDENTIALS);
+        else if (loginEvent.getClientName().equals(""))
+            loginEvent.setStatus(StatusCode.CREDENTIALS);
+        else if (loginEvent.getClientName().equals("*"))
+            loginEvent.setStatus(StatusCode.CREDENTIALS);
+        else if (loginEvent.getClientName().equals("**"))
+            loginEvent.setStatus(StatusCode.CREDENTIALS);
+        else if (this.server.getClientsManager().exist(loginEvent.getClientName())) {
+            loginEvent.setStatus(StatusCode.ALREADY_LOGGED);
         }
 
-        this.server.getEvents().execEvent(this.server.getEvents().getLogin(), loginEvent, (code, custom) -> {
-            try {
-                this.doSendStatus(loginEvent);
+        loginEvent.callEvent(getServer().getEvents());
 
-                if (code == StatusCode.Login.INVALID_CREDENTIALS) {
-                    throw new ServerCredentialsException(
-                            loginEvent.getSocket().getRemoteSocketAddress(),
-                            code,
-                            custom,
-                            loginEvent.getClientName(),
-                            loginEvent.getPassword()
-                    );
-                }
-
-                if (code == StatusCode.Login.ALREADY_LOGGED) {
-                    throw new ServerAlreadyLoggedException(
-                            socket.getLocalSocketAddress(),
-                            StatusCode.Login.ALREADY_LOGGED,
-                            null,
-                            loginEvent.getClientName()
-                    );
-                }
-
-
-                if (code < 0) {
-                    throw new ServerCodeSentException(
-                            socket.getRemoteSocketAddress(),
-                            loginEvent.getStatusCode(),
-                            loginEvent.getStatusCustom()
-                    );
-                }
-
-
-                this.clientName = loginEvent.getClientName();
-
-                this.server.getClientsManager().add(this.clientName, this);
-
-                isgood.complete(true);
-            } catch (Exception e) {
-                loginEvent.callException(e);
-                isgood.complete(false);
-                this.close(); // close the server
-            }
-        });
         return isgood.join();
     }
 
@@ -181,7 +170,7 @@ public class LoggedClient implements Closeable {
 
 
     public synchronized void sendOrThrow (final Object object, final Consumer<CatcherServer.ReplyBuilder> consumer) throws IOException {
-        final Packet packet = new Packet(object, "", RawPacket.random.nextLong());
+        final Packet packet = new Packet(object, "", SendPacket.random.nextLong());
 
         final CatcherServer.ReplyBuilder replyBuilder = this.server.getCatcherServer().getReplyBuilder(
                 packet.getIdRequest(),

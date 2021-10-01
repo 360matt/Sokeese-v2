@@ -1,14 +1,19 @@
 package fr.i360matt.sokeese.common;
 
-public class StatusCode {
-    public static final int OK = 0;
+public enum StatusCode {
+    OK (0),
+    ALREADY_LOGGED (-1_2),
+    CREDENTIALS (-1_1),
+    OTHER (-1);
 
-    public static class Login {
-        public static final int INVALID_CREDENTIALS = -1_1;
-        public static final int ALREADY_LOGGED = -1_2;
+
+
+    StatusCode (int code) {
+        this.code = code;
+    };
+
+    int code;
+    public int getCode () {
+        return code;
     }
-
-
-
-
 }

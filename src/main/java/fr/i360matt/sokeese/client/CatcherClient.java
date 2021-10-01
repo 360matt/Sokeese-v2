@@ -2,7 +2,7 @@ package fr.i360matt.sokeese.client;
 
 
 import fr.i360matt.sokeese.common.redistribute.Packet;
-import fr.i360matt.sokeese.common.redistribute.reply.RawReply;
+import fr.i360matt.sokeese.common.redistribute.reply.SendReply;
 import fr.i360matt.sokeese.common.redistribute.reply.Reply;
 
 import java.io.Closeable;
@@ -35,12 +35,12 @@ public final class CatcherClient implements Closeable {
 
         public void reply (final Object obj) {
             if (this.idRequest != -1) {
-                final RawReply rawReply = new RawReply(
+                final SendReply sendReply = new SendReply(
                         this.clientName,
                         obj,
                         this.idRequest
                 );
-                client.send(rawReply);
+                client.send(sendReply);
             }
         }
     }

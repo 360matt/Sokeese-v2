@@ -1,7 +1,5 @@
 import fr.i360matt.sokeese.client.SokeeseClient;
-import fr.i360matt.sokeese.client.exceptions.ClientAlreadyLoggedException;
-import fr.i360matt.sokeese.client.exceptions.ClientCodeSentException;
-import fr.i360matt.sokeese.client.exceptions.ClientCredentialsException;
+import fr.i360matt.sokeese.common.SokeeseException;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -15,7 +13,7 @@ public class RunBeta {
             try {
                 client_beta.connect("127.0.0.1", 4000, "beta", "escargot");
                 System.out.println("beta closed");
-            } catch (IOException | RuntimeException | ClientCodeSentException | ClientCredentialsException | ClientAlreadyLoggedException | ClassNotFoundException  e) {
+            } catch (IOException | RuntimeException | ClassNotFoundException | SokeeseException e) {
                 e.printStackTrace();
             }
         }).start();
