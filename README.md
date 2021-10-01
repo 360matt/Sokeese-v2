@@ -29,7 +29,7 @@ This rich and varied library will greatly facilitate development, it is very lig
 <dependency>
     <groupId>io.github.360matt</groupId>
     <artifactId>Sokeese-v2</artifactId>
-    <version>2.1-SNAPSHOT</version>
+    <version>2.2-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -71,7 +71,7 @@ manager.disconnectAll();
 server.disconnectAll();
 ```
 
-### Events
+### Login Events
 ```java
 server.addLoginEvent((loginEvent -> {
 
