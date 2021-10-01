@@ -1,6 +1,4 @@
-package fr.i360matt.sokeese.server;
-
-import fr.i360matt.sokeese.common.SokeeseException;
+package fr.i360matt.sokeese.common.exceptions;
 
 import java.net.Socket;
 import java.net.SocketAddress;

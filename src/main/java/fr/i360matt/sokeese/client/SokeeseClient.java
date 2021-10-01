@@ -1,6 +1,6 @@
 package fr.i360matt.sokeese.client;
 
-import fr.i360matt.sokeese.common.SokeeseException;
+import fr.i360matt.sokeese.common.exceptions.SokeeseException;
 import fr.i360matt.sokeese.common.StatusCode;
 import fr.i360matt.sokeese.common.redistribute.SendPacket;
 

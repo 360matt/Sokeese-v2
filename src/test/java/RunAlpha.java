@@ -1,5 +1,5 @@
 import fr.i360matt.sokeese.client.SokeeseClient;
-import fr.i360matt.sokeese.common.SokeeseException;
+import fr.i360matt.sokeese.common.exceptions.SokeeseException;
 
 import java.io.IOException;
 

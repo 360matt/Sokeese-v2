@@ -1,6 +1,6 @@
 package fr.i360matt.sokeese.server;
 
-import fr.i360matt.sokeese.server.events.EventAbstract;
+import fr.i360matt.sokeese.common.exceptions.ServerException;
 import fr.i360matt.sokeese.common.StatusCode;
 import fr.i360matt.sokeese.common.redistribute.Packet;
 import fr.i360matt.sokeese.common.redistribute.SendPacket;
@@ -53,7 +53,7 @@ public class LoggedClient implements Closeable {
 
 
 
-    private void doSendStatus (final EventAbstract event) throws Exception {
+    private void doSendStatus (final LoginEvent event) throws Exception {
         final StatusCode statusCode = event.getStatusCode();
         sender.writeInt(statusCode.getCode());
         if (statusCode.getCode() == StatusCode.OTHER.getCode())
@@ -121,7 +121,7 @@ public class LoggedClient implements Closeable {
             loginEvent.setStatus(StatusCode.ALREADY_LOGGED);
         }
 
-        loginEvent.callEvent(getServer().getEvents());
+        getServer().getLoginEvents().execEvent(loginEvent);
 
         return isgood.join();
     }

@@ -2,7 +2,7 @@ package fr.i360matt.sokeese.server;
 
 import fr.i360matt.sokeese.common.redistribute.Packet;
 import fr.i360matt.sokeese.common.redistribute.SendPacket;
-import fr.i360matt.sokeese.server.events.ServerEventManager;
+import fr.i360matt.sokeese.server.events.LoginEventManager;
 import fr.i360matt.sokeese.server.events.LoginEvent;
 
 import java.io.Closeable;
@@ -20,7 +20,7 @@ public class SokeeseServer implements Closeable {
     private ServerSocket _server;
 
     private ScheduledExecutorService executorService;
-    private final ServerEventManager events = new ServerEventManager();
+    private final LoginEventManager loginEvents = new LoginEventManager();
     private final ClientsManager clientsManager = new ClientsManager();
     private final CatcherServer catcherServer = new CatcherServer(this);
 
@@ -62,8 +62,8 @@ public class SokeeseServer implements Closeable {
     }
 
 
-    protected ServerEventManager getEvents () {
-        return this.events;
+    protected LoginEventManager getLoginEvents () {
+        return this.loginEvents;
     }
 
     protected CatcherServer getCatcherServer () {
@@ -98,7 +98,7 @@ public class SokeeseServer implements Closeable {
 
 
     public void addLoginEvent (final Consumer<LoginEvent> event) {
-        this.events.getLogin().add(event);
+        this.loginEvents.getLoginEvents().add(event);
     }
 
     public <A> void on (final Class<A> clazz, final BiConsumer<A, CatcherServer.OnRequest> biConsumer) {
@@ -200,9 +200,5 @@ public class SokeeseServer implements Closeable {
     public void disconnectAll () {
         this.clientsManager.disconnectAll();
     }
-
-
-
-
 
 }

@@ -1,4 +1,6 @@
-package fr.i360matt.sokeese.common;
+package fr.i360matt.sokeese.common.exceptions;
+
+import fr.i360matt.sokeese.common.StatusCode;
 
 public class SokeeseException extends Exception {
 

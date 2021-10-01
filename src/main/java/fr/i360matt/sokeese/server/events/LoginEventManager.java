@@ -5,14 +5,14 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
-public class ServerEventManager {
+public class LoginEventManager {
 
     protected final Set<Consumer<LoginEvent>> LOGIN = new HashSet<>();
 
-    public <T extends EventAbstract> void execEvent (final Set<Consumer<T>> events, T datas) {
+    public void execEvent (LoginEvent datas) {
         try {
             do {
-                for (final Consumer<T> candidate : events) {
+                for (final Consumer<LoginEvent> candidate : LOGIN) {
                     if (datas.getStatusCode().getCode() >= 0) {
                         candidate.accept(datas);
                         continue;
@@ -32,7 +32,7 @@ public class ServerEventManager {
         }
     }
 
-    public Set<Consumer<LoginEvent>> getLogin () {
+    public Set<Consumer<LoginEvent>> getLoginEvents () {
         return this.LOGIN;
     }
 }
