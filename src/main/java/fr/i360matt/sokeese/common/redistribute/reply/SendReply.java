@@ -2,14 +2,14 @@ package fr.i360matt.sokeese.common.redistribute.reply;
 
 import java.io.Serializable;
 
-public final class RawReply implements Serializable {
+public final class SendReply implements Serializable {
 
     private final String recipient;
     private final Object obj;
     private final long id;
 
 
-    public RawReply (final String recipient, final Object obj, final long id) {
+    public SendReply (final String recipient, final Object obj, final long id) {
         this.recipient = recipient;
         this.obj = obj;
         this.id = id;

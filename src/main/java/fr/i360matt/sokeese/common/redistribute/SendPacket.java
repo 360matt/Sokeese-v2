@@ -3,7 +3,7 @@ package fr.i360matt.sokeese.common.redistribute;
 import java.io.Serializable;
 import java.util.Random;
 
-public final class RawPacket implements Serializable {
+public final class SendPacket implements Serializable {
 
     public static final Random random = new Random();
 
@@ -13,13 +13,13 @@ public final class RawPacket implements Serializable {
     private final long idRequest;
 
 
-    public RawPacket (final String recipient, final Object obj) {
+    public SendPacket (final String recipient, final Object obj) {
         this.recipient = recipient;
         this.obj = obj;
         this.idRequest = random.nextLong();
     }
 
-    public RawPacket (final String[] recipient, final Object obj) {
+    public SendPacket (final String[] recipient, final Object obj) {
         this.recipient = recipient;
         this.obj = obj;
         this.idRequest = random.nextLong();
