@@ -79,14 +79,9 @@ server.addLoginEvent((loginEvent -> {
     loginEvent.getPassword(); // client's password who want to connect
 
     loginEvent.getSocket(); // get client's Socket connection
-
-    // if other registered event has set status to INVALID_CREDENTIALS
-    loginEvent.onException(ServerCredentialsException.class, (exEvent) -> {
-		// exEvent is ServerCredentialsException type
-    });
-
-    loginEvent.onException(IOException.class, (exEvent) -> {
-		// catch a IO exception here
+        
+    loginEvent.onException((exEvent) -> {
+        // catch exception here
     });
 
 
@@ -108,7 +103,7 @@ server.addLoginEvent((loginEvent -> {
 
     //you won't need these methods,
     // they will always return 0 - ""
-    int code = loginEvent.getStatusCode();
+    StatusCode statusCode = loginEvent.getStatusCode();
     String custom = loginEvent.getStatusCustom();
 
     loginEvent.freeze(100);
@@ -208,7 +203,7 @@ new Thread(() -> {
   try {
     client.connect("127.0.0.1", 4000, "name", "password");
     System.out.println("Alpha closed");
-  } catch (IOException | RuntimeException | ClientCodeSentException | ClientCredentialsException | ClientAlreadyLoggedException | ClassNotFoundException  e) {
+  } catch (IOException | RuntimeException | SokeeseException  e) {
     e.printStackTrace();
   }
 }).start();
