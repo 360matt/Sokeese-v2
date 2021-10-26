@@ -23,7 +23,7 @@ This rich and varied library will greatly facilitate development, it is very lig
 <repositories>
     <repository>
         <id>sonatype</id>
-        <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
     </repository>
 </repositories>
 <dependency>
