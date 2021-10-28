@@ -4,11 +4,11 @@ import fr.i360matt.sokeese.common.StatusCode;
 
 public class SokeeseException extends Exception {
 
-    protected StatusCode type;
+    private StatusCode type;
     private String customType;
 
-    protected String username;
-    protected String password;
+    private String username;
+    private String password;
 
 
 
@@ -39,5 +39,14 @@ public class SokeeseException extends Exception {
     }
     public String getPassword () {
         return password;
+    }
+
+
+    @Override
+    public String toString () {
+        return "SokeeseException{" +
+                "type=" + type +
+                ", customType='" + customType + '\'' +
+                '}';
     }
 }

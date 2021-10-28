@@ -2,8 +2,7 @@ package fr.i360matt.sokeese.server;
 
 import fr.i360matt.sokeese.common.redistribute.Packet;
 import fr.i360matt.sokeese.common.redistribute.SendPacket;
-import fr.i360matt.sokeese.server.events.LoginEventManager;
-import fr.i360matt.sokeese.server.events.LoginEvent;
+import fr.i360matt.sokeese.server.events.ListenerManager;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -20,8 +19,10 @@ public class SokeeseServer implements Closeable {
     private ServerSocket _server;
 
     private ScheduledExecutorService executorService;
-    private final LoginEventManager loginEvents = new LoginEventManager();
+    private final ListenerManager listenerManager = new ListenerManager(this);
     private final ClientsManager clientsManager = new ClientsManager();
+
+    private final Router router = new Router(this);
     private final CatcherServer catcherServer = new CatcherServer(this);
 
 
@@ -62,12 +63,16 @@ public class SokeeseServer implements Closeable {
     }
 
 
-    protected LoginEventManager getLoginEvents () {
-        return this.loginEvents;
+    public ListenerManager getListenerManager () {
+        return this.listenerManager;
     }
 
     protected CatcherServer getCatcherServer () {
         return this.catcherServer;
+    }
+
+    protected Router getRouter () {
+        return this.router;
     }
 
     public ClientsManager getClientsManager () {
@@ -78,7 +83,7 @@ public class SokeeseServer implements Closeable {
         return this._server;
     }
 
-    protected ScheduledExecutorService getExecutorService () {
+    public ScheduledExecutorService getExecutorService () {
         return this.executorService;
     }
 
@@ -97,11 +102,7 @@ public class SokeeseServer implements Closeable {
     // ___________________________________________  API USE _________________________________________
 
 
-    public void addLoginEvent (final Consumer<LoginEvent> event) {
-        this.loginEvents.getLoginEvents().add(event);
-    }
-
-    public <A> void on (final Class<A> clazz, final BiConsumer<A, CatcherServer.OnRequest> biConsumer) {
+    public <A> void on (final Class<A> clazz, final BiConsumer<A, CatcherServer.RequestData> biConsumer) {
         this.catcherServer.on(clazz, biConsumer);
     }
 

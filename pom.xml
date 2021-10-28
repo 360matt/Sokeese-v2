@@ -6,7 +6,7 @@
 
     <groupId>io.github.360matt</groupId>
     <artifactId>Sokeese-v2</artifactId>
-    <version>2.2-SNAPSHOT</version>
+    <version>2.3-SNAPSHOT</version>
 
     <build>
         <plugins>

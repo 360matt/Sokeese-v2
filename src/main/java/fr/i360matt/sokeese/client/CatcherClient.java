@@ -15,16 +15,88 @@ import java.util.function.Consumer;
 
 public final class CatcherClient implements Closeable {
 
-    private final Map<Class<?>, Set<BiConsumer<?, OnRequest>>> simpleEvent = new HashMap<>();
+    private final SokeeseClient client;
+
+    private final RequestData EMPTY_onRequest = new RequestData(null, -1);
+    private final Map<Class<?>, Set<BiConsumer<?, RequestData>>> simpleEvent = new HashMap<>();
     private final Map<Long, Map<Class<?>, ReplyExecuted>> complexEvents = new ConcurrentHashMap<>();
 
-    private final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
+    public CatcherClient (final SokeeseClient client) {
+        this.client = client;
+    }
 
-    public final class OnRequest {
+    public ReplyBuilder getReplyBuilder (final long idRequest, final Object recipient) {
+        return new ReplyBuilder(idRequest, recipient);
+    }
+
+
+    public void incomingRequest (final Object obj) {
+        if (obj instanceof Packet) {
+            this.asPacket((Packet) obj);
+            return;
+        }
+        if (obj instanceof Reply) {
+            this.asReply((Reply) obj);
+            return;
+        }
+
+        this.callWithRequest(obj, EMPTY_onRequest);
+    }
+
+    private void asReply (final Reply reply) {
+        final Map<Class<?>, ReplyExecuted> relatedMap = complexEvents.get(reply.getId());
+        if (relatedMap != null) {
+            // if reply is waited
+
+            final ReplyExecuted candidate = relatedMap.get(reply.getObj().getClass());
+            if (candidate != null) {
+                // if reply class-type is waited
+
+                candidate.biConsumer.accept(reply.getObj(), reply.getSender());
+                candidate.removeToQueue(reply.getSender());
+            }
+        }
+    }
+
+
+    private void asPacket (final Packet packet) {
+        final RequestData onRequest = new RequestData(
+                packet.getSender(),
+                packet.getIdRequest()
+        );
+
+        this.callWithRequest(packet.getObj(), onRequest);
+    }
+
+
+
+    public <A> void on (final Class<A> clazz, final BiConsumer<A, RequestData> biConsumer) {
+        final Set<BiConsumer<?, RequestData>> hashset = simpleEvent.computeIfAbsent(clazz, k -> new HashSet<>());
+        hashset.add(biConsumer);
+    }
+
+    public void unregister (final Class<?> clazz) {
+        simpleEvent.remove(clazz);
+    }
+
+    public void unregisterAll () {
+        simpleEvent.clear();
+    }
+
+    public void callWithRequest (final Object obj, final RequestData onRequest) {
+        final Set<BiConsumer<?, RequestData>> hashset = simpleEvent.get(obj.getClass());
+        if (hashset != null) {
+            for (final BiConsumer<?, RequestData> consumer : hashset) {
+                ((BiConsumer) consumer).accept(obj, onRequest);
+            }
+        }
+    }
+
+    public final class RequestData {
         private final String clientName;
         private final long idRequest;
 
-        public OnRequest (final String clientName, final long idRequest) {
+        public RequestData (final String clientName, final long idRequest) {
             this.clientName = clientName;
             this.idRequest = idRequest;
         }
@@ -123,77 +195,6 @@ public final class CatcherClient implements Closeable {
                 }, maxDelay, TimeUnit.MILLISECONDS);
             }
         }
-    }
-
-
-    private final SokeeseClient client;
-    public CatcherClient (final SokeeseClient client) {
-        this.client = client;
-    }
-
-    public ReplyBuilder getReplyBuilder (final long idRequest, final Object recipient) {
-        return new ReplyBuilder(idRequest, recipient);
-    }
-
-
-    public <A> void on (final Class<A> clazz, final BiConsumer<A, OnRequest> biConsumer) {
-        final Set<BiConsumer<?, OnRequest>> hashset = simpleEvent.computeIfAbsent(clazz, k -> new HashSet<>());
-        hashset.add(biConsumer);
-    }
-
-    public void unregister (final Class<?> clazz) {
-        simpleEvent.remove(clazz);
-    }
-
-    public void unregisterAll () {
-        simpleEvent.clear();
-    }
-
-    public void incomingRequest (final Object obj) {
-        if (obj instanceof Packet) {
-            this.processPacket((Packet) obj);
-            return;
-        }
-        if (obj instanceof Reply) {
-            this.processReply((Reply) obj);
-            return;
-        }
-
-        this.callWithRequest(obj, EMPTY_onRequest);
-    }
-
-    public void callWithRequest (final Object obj, final OnRequest onRequest) {
-        final Set<BiConsumer<?, OnRequest>> hashset = simpleEvent.get(obj.getClass());
-        if (hashset != null) {
-            for (final BiConsumer<?, OnRequest> consumer : hashset) {
-                ((BiConsumer) consumer).accept(obj, onRequest);
-            }
-        }
-    }
-
-    private void processReply (final Reply reply) {
-        final Map<Class<?>, ReplyExecuted> relatedMap = complexEvents.get(reply.getId());
-        if (relatedMap != null) {
-            // if reply is waited
-
-            final ReplyExecuted candidate = relatedMap.get(reply.getObj().getClass());
-            if (candidate != null) {
-                // if reply class-type is waited
-
-                candidate.biConsumer.accept(reply.getObj(), reply.getSender());
-                candidate.removeToQueue(reply.getSender());
-            }
-        }
-    }
-
-
-    private void processPacket (final Packet packet) {
-        final OnRequest onRequest = new OnRequest(
-                packet.getSender(),
-                packet.getIdRequest()
-        );
-
-        this.callWithRequest(packet.getObj(), onRequest);
     }
 
     @Override

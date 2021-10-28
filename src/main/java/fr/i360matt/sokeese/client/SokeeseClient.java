@@ -246,7 +246,7 @@ public class SokeeseClient implements Closeable {
         return this._socket;
     }
 
-    public <A> void on (final Class<A> clazz, final BiConsumer<A, CatcherClient.OnRequest> biConsumer) {
+    public <A> void on (final Class<A> clazz, final BiConsumer<A, CatcherClient.RequestData> biConsumer) {
         this.catcherClient.on(clazz, biConsumer);
     }
 

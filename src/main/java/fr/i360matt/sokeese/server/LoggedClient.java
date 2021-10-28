@@ -1,6 +1,5 @@
 package fr.i360matt.sokeese.server;
 
-import fr.i360matt.sokeese.common.exceptions.ServerException;
 import fr.i360matt.sokeese.common.StatusCode;
 import fr.i360matt.sokeese.common.redistribute.Packet;
 import fr.i360matt.sokeese.common.redistribute.SendPacket;
@@ -8,7 +7,7 @@ import fr.i360matt.sokeese.server.events.LoginEvent;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.concurrent.CompletableFuture;
+import java.net.SocketException;
 import java.util.function.Consumer;
 
 public class LoggedClient implements Closeable {
@@ -37,7 +36,7 @@ public class LoggedClient implements Closeable {
                         try {
                             this.isEnabled = true;
                             while (this.isEnabled && this.server.getSocketServer() != null) {
-                                this.server.getCatcherServer().incomingRequest(this.receiver.readUnshared(), this);
+                                this.server.getRouter().incomingRequest(this.receiver.readUnshared(), this);
                             }
                         } catch (final EOFException e) {
                             throw e;
@@ -53,82 +52,42 @@ public class LoggedClient implements Closeable {
 
 
 
-    private void doSendStatus (final LoginEvent event) throws Exception {
+    private void doSendStatus (final LoginEvent event) throws IOException {
         final StatusCode statusCode = event.getStatusCode();
-        sender.writeInt(statusCode.getCode());
+        this.sender.writeInt(statusCode.getCode());
         if (statusCode.getCode() == StatusCode.OTHER.getCode())
-            sender.writeUTF(event.getStatusCustom());
-        sender.flush();
+            this.sender.writeUTF(event.getStatusCustom());
+        this.sender.flush();
 
     }
 
     private boolean doWaitLogin () throws IOException {
-        final CompletableFuture<Boolean> isgood = new CompletableFuture<>();
+        final LoginEvent event = new LoginEvent(this);
 
-        LoggedClient loggedClient = this;
+        this.clientName = this.receiver.readUTF();
+        event.setClientName(this.clientName);
+        event.setPassword(this.receiver.readUTF());
 
-        final LoginEvent loginEvent = new LoginEvent() {
-            @Override
-            public void callback () {
-                try {
-                    doSendStatus(this);
+        this.getServer().getListenerManager().callEvent(event);
 
-                    if (this.getStatusCode().getCode() < StatusCode.OK.getCode()) {
-                        final ServerException serverException = new ServerException();
-                        serverException.setSocket(getSocket());
-                        serverException.setAddress(getSocket().getRemoteSocketAddress());
-                        serverException.setUsername(getClientName());
-                        serverException.setPassword(getPassword());
+        doSendStatus(event);
 
-                        if (this.getStatusCode() == StatusCode.CREDENTIALS) {
-                            serverException.setType(StatusCode.CREDENTIALS);
-                            throw serverException;
-                        } else if (this.getStatusCode() == StatusCode.ALREADY_LOGGED) {
-                            serverException.setType(StatusCode.ALREADY_LOGGED);
-                            throw serverException;
-                        } else {
-                            serverException.setType(StatusCode.OTHER);
-                            serverException.setCustomType(this.getStatusCustom());
-                            throw serverException;
-                        }
-                    }
-
-                    loggedClient.clientName = this.getClientName();
-                    loggedClient.getServer().getClientsManager().add(clientName, loggedClient);
-
-                    isgood.complete(true);
-                } catch (final Exception ex) {
-                    callException(ex);
-                    isgood.complete(false);
-                    loggedClient.close(); // close the server
-                }
-            }
-        };
-
-        loginEvent.setSocket(this.socket);
-        loginEvent.setClientName(this.receiver.readUTF());
-        loginEvent.setPassword(this.receiver.readUTF());
-
-        if (loginEvent.getClientName() == null)
-            loginEvent.setStatus(StatusCode.CREDENTIALS);
-        else if (loginEvent.getClientName().equals(""))
-            loginEvent.setStatus(StatusCode.CREDENTIALS);
-        else if (loginEvent.getClientName().equals("*"))
-            loginEvent.setStatus(StatusCode.CREDENTIALS);
-        else if (loginEvent.getClientName().equals("**"))
-            loginEvent.setStatus(StatusCode.CREDENTIALS);
-        else if (this.server.getClientsManager().exist(loginEvent.getClientName())) {
-            loginEvent.setStatus(StatusCode.ALREADY_LOGGED);
+        if (event.getStatusCode().getCode() != StatusCode.OK.getCode()) {
+            this.close(); // close the server
+            return false;
+        } else {
+            this.clientName = this.getClientName();
+            this.getServer().getClientsManager().add(this.clientName, this);
+            return true;
         }
-
-        getServer().getLoginEvents().execEvent(loginEvent);
-
-        return isgood.join();
     }
 
 
     @Override
     public void close () {
+        if (this.clientName != null) {
+            this.getServer().getClientsManager().remove(this.clientName);
+        }
         try {
             this.isEnabled = false;
             this.socket.close();

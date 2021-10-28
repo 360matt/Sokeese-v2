@@ -21,7 +21,7 @@ public class RunAlpha {
         // wait the client connect to server
 
         client_alpha.on(TestObj.class, (obj, event) -> {
-           // event.reply(0);
+            event.reply(0);
         });
     }
 

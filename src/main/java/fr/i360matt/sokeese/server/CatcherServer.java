@@ -1,9 +1,8 @@
 package fr.i360matt.sokeese.server;
 
-import fr.i360matt.sokeese.common.redistribute.Packet;
 import fr.i360matt.sokeese.common.redistribute.SendPacket;
-import fr.i360matt.sokeese.common.redistribute.reply.SendReply;
 import fr.i360matt.sokeese.common.redistribute.reply.Reply;
+import fr.i360matt.sokeese.common.redistribute.reply.SendReply;
 
 import java.io.Closeable;
 import java.util.*;
@@ -15,39 +14,73 @@ import java.util.function.Consumer;
 
 public final class CatcherServer implements Closeable {
 
-    private final Map<Class<?>, Set<BiConsumer<?, OnRequest>>> simpleEvents = new HashMap<>();
-    private final Map<Long, Map<Class<?>, ReplyExecuted>> complexEvents = new ConcurrentHashMap<>();
+    public static final RequestData EMPTY___REQUEST_DATA = new RequestData(null, -1);
 
-    private final OnRequest EMPTY_onRequest = new OnRequest(null, -1);
+    private final SokeeseServer server;
 
-    public static final class OnRequest {
-        private final LoggedClient loggedClient;
-        private final long idRequest;
+    private final Map<Class<?>, Set<BiConsumer<?, RequestData>>> simpleEvents = new HashMap<>();
+    private final Map<Long, Map<Class<?>, ReplyExecuted>> replyEvents = new ConcurrentHashMap<>();
 
-        public OnRequest (final LoggedClient loggedClient, final long idRequest) {
-            this.loggedClient = loggedClient;
-            this.idRequest = idRequest;
-        }
 
-        public LoggedClient getClientInstance () {
-            return this.loggedClient;
-        }
+    public CatcherServer (final SokeeseServer server) {
+        this.server = server;
+    }
 
-        public String getClientName () {
-            return this.loggedClient.getClientName();
-        }
 
-        public void reply (final Object obj) {
-            if (idRequest != -1) {
-                final Reply rawReply = new Reply(
-                        "",
-                        obj,
-                        this.idRequest
-                );
-                loggedClient.send(rawReply);
+    void replyForServer (final SendReply reply, final LoggedClient client) {
+        final Map<Class<?>, ReplyExecuted> relatedMap = replyEvents.get(reply.getId());
+        if (relatedMap != null) {
+            // if reply is waited
+
+            final ReplyExecuted candidate = relatedMap.get(reply.getObj().getClass());
+            if (candidate != null) {
+                // if reply class-type is waited
+
+                candidate.biConsumer.accept(reply.getObj(), client);
+                candidate.removeToQueue(client.getClientName());
             }
         }
     }
+
+    void packetForServer (final SendPacket packet, final LoggedClient client) {
+        final RequestData requestData = new RequestData(
+                client,
+                packet.getId()
+        );
+
+        this.callWithRequest(packet.getObj(), requestData);
+    }
+
+
+    public <A> void on (final Class<A> clazz, final BiConsumer<A, RequestData> biConsumer) {
+        final Set<BiConsumer<?, RequestData>> hashset = simpleEvents.computeIfAbsent(clazz, k -> new HashSet<>());
+        hashset.add(biConsumer);
+    }
+
+    public void unregister (final Class<?> clazz) {
+        simpleEvents.remove(clazz);
+    }
+
+    public void unregisterAll () {
+        simpleEvents.clear();
+    }
+
+
+    public ReplyBuilder getReplyBuilder (final long idRequest, final Object recipient) {
+        return new ReplyBuilder(idRequest, recipient);
+    }
+
+    public void callWithRequest (final Object obj, final RequestData requestData) {
+        final Set<BiConsumer<?, RequestData>> hashset = simpleEvents.get(obj.getClass());
+        if (hashset != null) {
+            for (BiConsumer<?, RequestData> consumer : hashset) {
+                ((BiConsumer) consumer).accept(obj, requestData);
+            }
+        }
+    }
+
+
+
 
     public final class ReplyExecuted {
         private final BiConsumer<Object, LoggedClient> biConsumer;
@@ -90,7 +123,7 @@ public final class CatcherServer implements Closeable {
             this.idRequest = idRequest;
             this.recipient = recipient;
 
-            complexEvents.put(idRequest, this.relatedMap);
+            replyEvents.put(idRequest, this.relatedMap);
         }
 
         public <A> ReplyBuilder on (final Class<A> clazz, final BiConsumer<Object, LoggedClient> biConsumer) {
@@ -110,7 +143,7 @@ public final class CatcherServer implements Closeable {
                 server.getExecutorService().schedule(() -> {
                     this.relatedMap.remove(clazz);
                     if (this.relatedMap.isEmpty()) {
-                        complexEvents.remove(this.idRequest);
+                        replyEvents.remove(this.idRequest);
                         this.relatedMap = null;
                     }
                 }, delay, TimeUnit.MILLISECONDS);
@@ -132,181 +165,41 @@ public final class CatcherServer implements Closeable {
         }
     }
 
-    private final SokeeseServer server;
-    public CatcherServer (final SokeeseServer server) {
-        this.server = server;
-    }
-    public ReplyBuilder getReplyBuilder (final long idRequest, final Object recipient) {
-        return new ReplyBuilder(idRequest, recipient);
-    }
+    public static final class RequestData {
+        private final LoggedClient loggedClient;
+        private final long idRequest;
 
-
-    public <A> void on (final Class<A> clazz, final BiConsumer<A, OnRequest> biConsumer) {
-        final Set<BiConsumer<?, OnRequest>> hashset = simpleEvents.computeIfAbsent(clazz, k -> new HashSet<>());
-        hashset.add(biConsumer);
-    }
-
-    public void unregister (final Class<?> clazz) {
-        simpleEvents.remove(clazz);
-    }
-
-    public void unregisterAll () {
-        simpleEvents.clear();
-    }
-
-    public void incomingRequest (final Object obj, final LoggedClient user) {
-        if (obj instanceof SendPacket) {
-            this.processRawPacket((SendPacket) obj, user);
-            return;
+        public RequestData (final LoggedClient loggedClient, final long idRequest) {
+            this.loggedClient = loggedClient;
+            this.idRequest = idRequest;
         }
 
-        if (obj instanceof SendReply) {
-            this.processRawReply((SendReply) obj, user);
-            return;
+        public LoggedClient getClientInstance () {
+            return this.loggedClient;
         }
 
-        this.processDirectObject(obj);
-
-    }
-
-    public void processDirectObject (final Object obj) {
-        this.callWithRequest(obj, EMPTY_onRequest);
-    }
-
-    public void callWithRequest (final Object obj, final OnRequest onRequest) {
-        final Set<BiConsumer<?, OnRequest>> hashset = simpleEvents.get(obj.getClass());
-        if (hashset != null) {
-            for (BiConsumer<?, OnRequest> consumer : hashset) {
-                ((BiConsumer) consumer).accept(obj, onRequest);
-            }
-        }
-    }
-
-
-    private void processReply (final SendReply reply, final LoggedClient client) {
-        final Map<Class<?>, ReplyExecuted> relatedMap = complexEvents.get(reply.getId());
-        if (relatedMap != null) {
-            // if reply is waited
-
-            final ReplyExecuted candidate = relatedMap.get(reply.getObj().getClass());
-            if (candidate != null) {
-                // if reply class-type is waited
-
-                candidate.biConsumer.accept(reply.getObj(), client);
-                candidate.removeToQueue(client.getClientName());
-            }
-        }
-    }
-
-    private void processPacket (final SendPacket packet, final LoggedClient client) {
-        final OnRequest onRequest = new OnRequest(
-                client,
-                packet.getId()
-        );
-
-        this.callWithRequest(packet.getObj(), onRequest);
-    }
-
-    private void processRawReply (final SendReply sendReply, final LoggedClient client) {
-        if (sendReply.getObj() instanceof SendPacket || sendReply.getObj() instanceof Packet) {
-            return;
-            // fixed exploit/bug: infinite recursive.
+        public String getClientName () {
+            return this.loggedClient.getClientName();
         }
 
-
-        if (sendReply.getRecipient() instanceof String) {
-            final LoggedClient candidate = server.getClient((String) sendReply.getRecipient());
-            if (candidate != null) {
-                final Reply reply = new Reply(
-                        client.getClientName(),
-                        sendReply.getObj(),
-                        sendReply.getId()
+        public void reply (final Object obj) {
+            if (idRequest != -1) {
+                final Reply rawReply = new Reply(
+                        "",
+                        obj,
+                        this.idRequest
                 );
-                candidate.send(reply);
+                loggedClient.send(rawReply);
             }
-        } else {
-            this.processReply(sendReply, client);
         }
     }
 
-    private void processRawPacket (final SendPacket sendPacket, final LoggedClient user) {
-        if (sendPacket.getObj() instanceof SendPacket || sendPacket.getObj() instanceof Packet) {
-            return;
-            // fixed exploit/bug: infinite recursive.
-        }
 
-        if (sendPacket.getRecipient() instanceof String) {
-            final String recipient = (String) sendPacket.getRecipient();
-            if (recipient.equals("")) {
-                // empty recipient = the recipient is server
-                this.processPacket(sendPacket, user);
-                return;
-            }
 
-            if (recipient.equals("*")) {
-                final Packet packet = new Packet(
-                        sendPacket.getObj(),
-                        user.getClientName(),
-                        sendPacket.getId()
-                );
 
-                for (final LoggedClient client : this.server.getClientsManager().getInstances())
-                    client.send(packet);
-            } else if (recipient.equals("**")) {
-                final Packet packet = new Packet(
-                        sendPacket.getObj(),
-                        user.getClientName(),
-                        sendPacket.getId()
-                );
-
-                for (final LoggedClient client : this.server.getClientsManager().getInstances())
-                    client.send(packet);
-
-                this.processPacket(sendPacket, user);
-            } else {
-                final LoggedClient candidate = server.getClient(recipient);
-                if (candidate != null) {
-                    final Packet packet = new Packet(
-                            sendPacket.getObj(),
-                            user.getClientName(),
-                            sendPacket.getId()
-                    );
-                    candidate.send(packet);
-                }
-            }
-        } else if (sendPacket.getRecipient() instanceof String[]) {
-            final String[] fixedRecipient = (String[]) Arrays.stream((String[]) sendPacket.getRecipient()).distinct().toArray();
-            // fixed exploit/bug: amplified DDoS with multiple same client name.
-
-            Packet packet = null;
-
-            for (final String candidateName : fixedRecipient) {
-                if (candidateName == null) {
-                    this.processPacket(sendPacket, user);
-                    continue;
-                }
-
-                final LoggedClient candidate = server.getClient(candidateName);
-                if (candidate != null) {
-                    if (packet == null) {
-                        packet = new Packet(
-                                sendPacket.getObj(),
-                                user.getClientName(),
-                                sendPacket.getId()
-                        );
-                    }
-                    candidate.send(packet);
-                }
-            }
-        } else {
-            // empty recipient = the recipient is server
-            this.processPacket(sendPacket, user);
-        }
-
-    }
 
     @Override
     public void close () {
-        this.complexEvents.clear();
+        this.replyEvents.clear();
     }
 }

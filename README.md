@@ -29,7 +29,7 @@ This rich and varied library will greatly facilitate development, it is very lig
 <dependency>
     <groupId>io.github.360matt</groupId>
     <artifactId>Sokeese-v2</artifactId>
-    <version>2.2-SNAPSHOT</version>
+    <version>2.3-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -73,46 +73,25 @@ server.disconnectAll();
 
 ### Login Events
 ```java
-server.addLoginEvent((loginEvent -> {
+server.getListenerManager().registerListener(new Listener() {
+    @Event
+    public void onLogin (final LoginEvent event) {
+        if (event.getStatusCode().equals(StatusCode.OK)) {
 
-    loginEvent.getClientName(); // client's name who want to connect
-    loginEvent.getPassword(); // client's password who want to connect
+        // do stuff with:
+        event.getPassword();
+        event.getClientName();
 
-    loginEvent.getSocket(); // get client's Socket connection
-        
-    loginEvent.onException((exEvent) -> {
-        // catch exception here
-    });
+        // and, now, invalide the auth if you want:
+        event.setStatusCode(StatusCode.CREDENTIALS);
+        event.setStatusCode("custom text");
 
+        }
 
-
-    loginEvent.setStatus(StatusCode.OK);
-    // the status codes are Integer,
-    // you must respect the protocol code by helping you with the StatusCode class.
-
-    loginEvent.setStatus("A custom error message, will be throw by client.");
-    // You can define your own status as a String,
-    // however, this will be considered an error code.
-
-
-    // IMPORTANT !!
-    // if you define an error code,
-    // the event is canceled and the rest of the events will not be executed,
-    // so it will be impossible to modify the status code again.
-
-
-    //you won't need these methods,
-    // they will always return 0 - ""
-    StatusCode statusCode = loginEvent.getStatusCode();
-    String custom = loginEvent.getStatusCustom();
-
-    loginEvent.freeze(100);
-    // freeze the event for 100ms AFTER all event.
-
-    loginEvent.freeze(0);
-    // remove freeze also
-
-}));
+        System.out.println("try to connect: [id: " + event.getClientName() + "; pwd: " + event.getPassword() + "]");
+        // debug only
+    }
+});
 ```
 
 ### Requests event per type

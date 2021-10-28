@@ -43,7 +43,7 @@ public class RunBeta {
                         System.out.println("Vitesse: " + (newer + "/" + diff + ": ") + (newer / diff));
                     });
                     replyBuilder.nothing((name) -> {
-                        // System.out.println("Rien eu: " + perdu.incrementAndGet());
+                        // System.out.println("Rien eu");
                     });
                 }));
             }
